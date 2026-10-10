@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 const tribus = [
   { nombre: "Hierro", texto: "Fuerza e hipertrofia con progresión semanal." },
@@ -18,12 +19,14 @@ export default function Home() {
           className="size-16"
           priority
         />
-        <a
-          href="#tribus"
-          className="rounded-md bg-orange-600 px-4 py-2 text-sm font-bold text-white"
-        >
-          Unirme a la tribu
-        </a>
+        <div className="flex items-center gap-3">
+          <Link href="/login" className="text-sm font-bold">
+            Iniciar sesión
+          </Link>
+          <Link href="/registro" className="btn-primary">
+            Unirme a la tribu
+          </Link>
+        </div>
       </header>
 
       <section className="flex flex-col gap-5">

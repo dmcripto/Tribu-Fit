@@ -24,3 +24,21 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer components {
+  .btn-primary {
+    @apply inline-block cursor-pointer rounded-md bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-700 disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-block cursor-pointer rounded-md border-2 border-current px-4 py-2 text-sm font-bold;
+  }
+  .campo {
+    @apply w-full rounded-md border border-zinc-300 bg-transparent px-3 py-2.5 text-base dark:border-zinc-700;
+  }
+  .etiqueta {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wider text-zinc-500;
+  }
+  .tarjeta {
+    @apply rounded-xl border border-zinc-200 p-5 dark:border-zinc-800;
+  }
+}
