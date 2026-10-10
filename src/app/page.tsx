@@ -13,9 +13,9 @@ export default function Home() {
         <Image
           src="/logo.png"
           alt="Tribu Fit"
-          width={179}
-          height={53}
-          className="rounded-lg bg-black px-2 py-1"
+          width={64}
+          height={64}
+          className="size-16"
           priority
         />
         <a
