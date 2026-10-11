@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import CampoClave from "@/components/CampoClave";
 import { registrar } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
 
@@ -87,7 +88,7 @@ export default function Registro() {
         </div>
         <div>
           <label className="etiqueta" htmlFor="password">Contraseña</label>
-          <input className="campo" id="password" name="password" type="password" autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
+          <CampoClave id="password" name="password" autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
         </div>
         {rol === "atleta" && (
           <div>

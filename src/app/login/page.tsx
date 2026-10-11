@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import CampoClave from "@/components/CampoClave";
 import { entrar } from "@/lib/auth";
 
 export default function Login() {
@@ -38,7 +39,7 @@ export default function Login() {
         </div>
         <div>
           <label className="etiqueta" htmlFor="password">Contraseña</label>
-          <input className="campo" id="password" name="password" type="password" autoComplete="current-password" />
+          <CampoClave id="password" name="password" autoComplete="current-password" />
         </div>
         {error && (
           <p role="alert" className="rounded-md border border-red-600 px-3 py-2 text-sm text-red-600">
