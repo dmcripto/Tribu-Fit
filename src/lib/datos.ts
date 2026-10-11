@@ -65,3 +65,49 @@ export function entrenosSemana(entrenos: Entreno[], hoy: string) {
   if (!hoy) return 0;
   return entrenos.filter((e) => dias(hoy, e.fecha) >= 0 && dias(hoy, e.fecha) < 7).length;
 }
+
+export const PLANES_KEY = "tf_planes";
+
+export type SemanaPlan = { semana: number; rutinas: Rutina[] };
+export type Plan = {
+  id: string;
+  alumno_id: string;
+  nombre: string;
+  fecha_inicio: string;
+  semanas: SemanaPlan[];
+};
+export const VACIO_PLANES: Plan[] = [];
+
+export function sumarDias(fecha: string, n: number) {
+  return new Date(Date.parse(fecha) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** AAAA-MM-DD a DD/MM/AAAA. */
+export function formatoFecha(f: string) {
+  const [a, m, d] = f.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+/** Semana del plan que toca hoy: 0 si aún no empieza, tope en la última. */
+export function semanaActual(plan: Plan, hoy: string) {
+  if (!hoy) return 0;
+  const d = dias(hoy, plan.fecha_inicio);
+  if (d < 0) return 0;
+  return Math.min(Math.floor(d / 7) + 1, plan.semanas.length);
+}
+
+export function planTerminado(plan: Plan, hoy: string) {
+  return !!hoy && dias(hoy, plan.fecha_inicio) >= plan.semanas.length * 7;
+}
+
+export type Estado = "al_dia" | "revisar" | "riesgo";
+
+/** Estado de seguimiento según días sin entrenar. */
+export function estadoAlumno(entrenos: Entreno[], hoy: string) {
+  if (!hoy) return { estado: "al_dia" as Estado, ultimo: null, desde: null };
+  const ultimo = entrenos.map((e) => e.fecha).sort().at(-1) ?? null;
+  const desde = ultimo === null ? null : dias(hoy, ultimo);
+  const estado: Estado =
+    desde === null || desde > 7 ? "riesgo" : desde >= 4 ? "revisar" : "al_dia";
+  return { estado, ultimo, desde };
+}

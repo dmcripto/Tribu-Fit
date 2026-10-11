@@ -1,36 +1,50 @@
 "use client";
 
 import { useState } from "react";
-import { ENTRENOS_KEY, RUTINAS, VACIO_ENTRENOS } from "@/lib/datos";
-import { useLocal, useToday } from "@/lib/store";
+import { useUsuario } from "@/components/AppShell";
+import {
+  RUTINAS, formatoFecha, planTerminado, semanaActual, sumarDias, type Rutina,
+} from "@/lib/datos";
+import { useEntrenos, usePlanesAlumno } from "@/lib/repo";
+import { useToday } from "@/lib/store";
 
 export default function Rutinas() {
   const hoy = useToday();
-  const [, guardarEntreno] = useLocal(ENTRENOS_KEY, VACIO_ENTRENOS);
-  const [actual, setActual] = useState(0);
-  const [hechos, setHechos] = useState<boolean[][]>(
-    RUTINAS.map((r) => r.ejercicios.map(() => false)),
-  );
+  const usuario = useUsuario();
+  const uid = usuario?.id ?? "";
+  const { anadir } = useEntrenos(uid);
+  const planes = usePlanesAlumno(uid);
+
+  // Plan activo: el más reciente que ya empezó y no ha terminado.
+  const activo = [...planes]
+    .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio))
+    .find((p) => semanaActual(p, hoy) > 0 && !planTerminado(p, hoy));
+  const semana = activo ? semanaActual(activo, hoy) : 0;
+  const lista: Rutina[] = activo
+    ? (activo.semanas.find((s) => s.semana === semana)?.rutinas ?? RUTINAS)
+    : RUTINAS;
+  const proxima = activo?.semanas.find((s) => s.semana === semana + 1);
+
+  const [elegida, setElegida] = useState(0);
+  const [hechos, setHechos] = useState<Record<string, boolean[]>>({});
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const rutina = RUTINAS[actual];
-  const hechosActual = hechos[actual];
-  const n = hechosActual.filter(Boolean).length;
+  const idx = Math.min(elegida, lista.length - 1);
+  const rutina = lista[idx];
+  const fila = (r: Rutina) => hechos[r.nombre] ?? r.ejercicios.map(() => false);
+  const marcadas = fila(rutina);
+  const n = marcadas.filter(Boolean).length;
   const total = rutina.ejercicios.length;
 
   function marcar(j: number, valor: boolean) {
-    setHechos((h) =>
-      h.map((fila, i) => (i === actual ? fila.map((v, k) => (k === j ? valor : v)) : fila)),
-    );
+    setHechos((h) => ({ ...h, [rutina.nombre]: marcadas.map((v, k) => (k === j ? valor : v)) }));
   }
 
-  function terminar() {
+  async function terminar() {
     if (n === 0) return setAviso("Marca al menos un ejercicio para guardar el entreno.");
-    guardarEntreno((prev) => [
-      ...prev,
-      { fecha: hoy, rutina: rutina.nombre, hechos: n, total },
-    ]);
-    setHechos((h) => h.map((fila, i) => (i === actual ? fila.map(() => false) : fila)));
+    const fallo = await anadir({ fecha: hoy, rutina: rutina.nombre, hechos: n, total });
+    if (fallo) return setAviso(fallo);
+    setHechos((h) => ({ ...h, [rutina.nombre]: marcadas.map(() => false) }));
     setAviso(
       n === total
         ? "Entreno completo guardado. Sumas 60 puntos a tu tribu."
@@ -40,25 +54,39 @@ export default function Rutinas() {
 
   return (
     <main className="flex flex-col gap-6">
-      <h1 className="text-5xl font-black uppercase leading-none">Rutinas</h1>
+      <div>
+        <h1 className="text-5xl font-black uppercase leading-none">Rutinas</h1>
+        {activo ? (
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <span className="font-bold text-orange-600">{activo.nombre}</span> · semana {semana} de {activo.semanas.length}
+            {proxima && ` · la semana ${proxima.semana} se libera el ${formatoFecha(sumarDias(activo.fecha_inicio, semana * 7))}`}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-zinc-500">
+            {planes.length > 0
+              ? "Tu plan empieza pronto. Mientras tanto tienes estas rutinas generales."
+              : "Rutinas generales. Cuando tu entrenador/a te asigne un plan, aparecerá aquí."}
+          </p>
+        )}
+      </div>
       <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
         <div className="flex flex-col gap-3">
-          {RUTINAS.map((r, i) => (
+          {lista.map((r, i) => (
             <button
               key={r.nombre}
               type="button"
-              aria-pressed={i === actual}
-              onClick={() => { setActual(i); setAviso(null); }}
+              aria-pressed={i === idx}
+              onClick={() => { setElegida(i); setAviso(null); }}
               className={`flex items-center justify-between gap-3 rounded-lg border-2 p-4 text-left ${
-                i === actual ? "border-orange-600" : "border-zinc-200 dark:border-zinc-800"
+                i === idx ? "border-orange-600" : "border-zinc-200 dark:border-zinc-800"
               }`}
             >
               <span>
                 <span className="block text-xl font-black uppercase">{r.nombre}</span>
-                <span className="text-sm text-zinc-500">{r.detalle}</span>
+                {r.detalle && <span className="text-sm text-zinc-500">{r.detalle}</span>}
               </span>
               <span className="font-mono text-xs">
-                {hechos[i].filter(Boolean).length}/{r.ejercicios.length}
+                {fila(r).filter(Boolean).length}/{r.ejercicios.length}
               </span>
             </button>
           ))}
@@ -89,7 +117,7 @@ export default function Rutinas() {
                         type="checkbox"
                         className="size-5 accent-orange-600"
                         aria-label={`Marcar ${x.nombre}`}
-                        checked={hechosActual[j]}
+                        checked={marcadas[j] ?? false}
                         onChange={(e) => marcar(j, e.target.checked)}
                       />
                     </td>

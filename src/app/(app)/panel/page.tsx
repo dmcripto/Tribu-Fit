@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
-import {
-  ENTRENOS_KEY, MEDIDAS_KEY, VACIO_ENTRENOS, VACIO_MEDIDAS, entrenosSemana, racha,
-} from "@/lib/datos";
-import { useLocal, useToday } from "@/lib/store";
+import { entrenosSemana, racha } from "@/lib/datos";
+import { vincularEntrenador } from "@/lib/auth";
+import { useEntrenos, useMedidas } from "@/lib/repo";
+import { modoDemo } from "@/lib/supabase";
+import { useToday } from "@/lib/store";
 
 function Dato({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
@@ -16,34 +18,70 @@ function Dato({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   );
 }
 
+function Vinculo() {
+  const [codigo, setCodigo] = useState("");
+  const [aviso, setAviso] = useState<string | null>(null);
+  async function enviar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!codigo.trim()) return setAviso("Escribe el código que te dio tu entrenador/a.");
+    const fallo = await vincularEntrenador(codigo);
+    setAviso(fallo ?? "Listo. Tu entrenador/a ya puede ver tu progreso.");
+  }
+  return (
+    <form onSubmit={enviar} className="tarjeta flex flex-col gap-3">
+      <h2 className="text-2xl font-black uppercase">Tu entrenador/a</h2>
+      <p className="text-sm text-zinc-500">
+        Escribe su código de invitación para compartirle tu progreso y recibir tus planes.
+      </p>
+      <div className="flex gap-2">
+        <input
+          className="campo max-w-48 uppercase"
+          aria-label="Código de invitación"
+          value={codigo}
+          onChange={(e) => setCodigo(e.target.value)}
+          placeholder="ABC123"
+        />
+        <button className="btn-primary">Vincular</button>
+      </div>
+      {aviso && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">{aviso}</p>}
+    </form>
+  );
+}
+
 export default function Panel() {
   const usuario = useUsuario();
   const hoy = useToday();
-  const [medidas] = useLocal(MEDIDAS_KEY, VACIO_MEDIDAS);
-  const [entrenos] = useLocal(ENTRENOS_KEY, VACIO_ENTRENOS);
+  const { medidas } = useMedidas(usuario?.id ?? "");
+  const { entrenos } = useEntrenos(usuario?.id ?? "");
 
   const orden = [...medidas].sort((a, b) => a.fecha.localeCompare(b.fecha));
   const ultima = orden[orden.length - 1];
   const cambio = ultima && orden.length > 1 ? ultima.peso_kg - orden[0].peso_kg : null;
   const semana = entrenosSemana(entrenos, hoy);
   const recientes = [...entrenos].reverse().slice(0, 5);
+  const coma = (n: number) => n.toFixed(1).replace(".", ",");
 
   return (
     <main className="flex flex-col gap-6">
       <div>
         <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
-          {usuario?.objetivo || "Tu progreso"}
+          {usuario?.rol === "entrenador" ? "Entrenador/a" : usuario?.objetivo || "Tu progreso"}
         </p>
         <h1 className="text-5xl font-black uppercase leading-none">
           Hola, {usuario?.nombre}
         </h1>
       </div>
+      {usuario?.rol === "entrenador" && (
+        <p className="text-sm">
+          <Link href="/entrenador" className="font-bold text-orange-600">Ir a Mis alumnos</Link>
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Dato
-          valor={ultima ? `${ultima.peso_kg.toFixed(1).replace(".", ",")} kg` : "—"}
-          etiqueta={cambio === null ? "Peso actual" : `Peso actual · ${cambio > 0 ? "+" : ""}${cambio.toFixed(1).replace(".", ",")} kg`}
+          valor={ultima ? `${coma(ultima.peso_kg)} kg` : "—"}
+          etiqueta={cambio === null ? "Peso actual" : `Peso actual · ${cambio > 0 ? "+" : ""}${coma(cambio)} kg`}
         />
-        <Dato valor={ultima?.grasa_pct !== undefined ? `${ultima.grasa_pct} %` : "—"} etiqueta="Grasa corporal" />
+        <Dato valor={ultima?.grasa_pct !== undefined ? `${String(ultima.grasa_pct).replace(".", ",")} %` : "—"} etiqueta="Grasa corporal" />
         <Dato valor={String(semana)} etiqueta="Entrenos en 7 días" />
         <Dato valor={String(racha(entrenos, hoy))} etiqueta="Días de racha" />
       </div>
@@ -65,7 +103,8 @@ export default function Panel() {
           </ul>
         )}
       </section>
-      {!ultima && (
+      {usuario?.rol === "atleta" && !modoDemo && !usuario.entrenadorId && <Vinculo />}
+      {!ultima && usuario?.rol === "atleta" && (
         <p className="text-sm text-zinc-500">
           Registra tu primer peso en <Link href="/medidas" className="font-bold text-orange-600">Medidas</Link> para ver tu evolución.
         </p>

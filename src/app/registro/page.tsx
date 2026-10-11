@@ -12,7 +12,9 @@ const objetivos = ["Perder grasa", "Ganar músculo", "Correr más", "Estar activ
 export default function Registro() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [rol, setRol] = useState<"atleta" | "entrenador">("atleta");
 
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,10 +32,12 @@ export default function Registro() {
       );
     setError(null);
     setEnviando(true);
-    const fallo = await registrar({
+    const res = await registrar({
       nombre,
       email,
       password,
+      rol,
+      codigoEntrenador: String(f.get("codigoEntrenador") ?? "").trim().toUpperCase(),
       objetivo: String(f.get("objetivo")),
       nivel: String(f.get("nivel")),
       datosSalud: true,
@@ -41,7 +45,8 @@ export default function Registro() {
       comparteEntrenador: f.get("comparteEntrenador") === "on",
     });
     setEnviando(false);
-    if (fallo) return setError(fallo);
+    if (res.error) return setError(res.error);
+    if (res.aviso) return setAviso(res.aviso);
     router.push("/panel");
   }
 
@@ -59,6 +64,19 @@ export default function Registro() {
         </p>
       )}
       <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
+        <fieldset>
+          <legend className="etiqueta">Soy</legend>
+          <div className="flex gap-2">
+            {(["atleta", "entrenador"] as const).map((r) => (
+              <label key={r} className="cursor-pointer">
+                <input type="radio" name="rol" value={r} checked={rol === r} onChange={() => setRol(r)} className="peer sr-only" />
+                <span className="inline-block rounded-full border-2 border-zinc-300 px-4 py-2 text-sm font-bold peer-checked:border-orange-600 peer-checked:bg-orange-600 peer-checked:text-white peer-focus-visible:outline-2 peer-focus-visible:outline-orange-600 dark:border-zinc-700">
+                  {r === "atleta" ? "Alumno/a" : "Entrenador/a"}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div>
           <label className="etiqueta" htmlFor="nombre">Nombre</label>
           <input className="campo" id="nombre" name="nombre" autoComplete="name" />
@@ -71,6 +89,12 @@ export default function Registro() {
           <label className="etiqueta" htmlFor="password">Contraseña</label>
           <input className="campo" id="password" name="password" type="password" autoComplete="new-password" placeholder="Mínimo 8 caracteres" />
         </div>
+        {rol === "atleta" && (
+          <div>
+            <label className="etiqueta" htmlFor="codigoEntrenador">Código de tu entrenador/a (opcional)</label>
+            <input className="campo uppercase" id="codigoEntrenador" name="codigoEntrenador" placeholder="ABC123" autoComplete="off" />
+          </div>
+        )}
         <fieldset>
           <legend className="etiqueta">Objetivo</legend>
           <div className="flex flex-wrap gap-2">
@@ -107,6 +131,11 @@ export default function Registro() {
         {error && (
           <p role="alert" className="rounded-md border border-red-600 px-3 py-2 text-sm text-red-600">
             {error}
+          </p>
+        )}
+        {aviso && (
+          <p role="status" className="rounded-md border border-green-700 px-3 py-2 text-sm text-green-700 dark:text-green-400">
+            {aviso}
           </p>
         )}
         <button className="btn-primary" disabled={enviando}>

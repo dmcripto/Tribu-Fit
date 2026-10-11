@@ -19,9 +19,9 @@ export default function Login() {
     if (!email || !password) return setError("Escribe tu correo y tu contraseña.");
     setError(null);
     setEnviando(true);
-    const fallo = await entrar(email, password);
+    const res = await entrar(email, password);
     setEnviando(false);
-    if (fallo) return setError(fallo);
+    if (res.error) return setError(res.error);
     router.push("/panel");
   }
 

@@ -8,10 +8,14 @@ import { modoDemo } from "@/lib/supabase";
 import { useLocal } from "@/lib/store";
 import type { Usuario } from "@/lib/types";
 
-const enlaces = [
+const enlacesAtleta = [
   { href: "/panel", texto: "Panel" },
   { href: "/rutinas", texto: "Rutinas" },
   { href: "/medidas", texto: "Medidas" },
+];
+const enlacesEntrenador = [
+  { href: "/entrenador", texto: "Mis alumnos" },
+  { href: "/panel", texto: "Panel" },
 ];
 
 export function useUsuario() {
@@ -22,6 +26,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const usuario = useUsuario();
   const ruta = usePathname();
   const router = useRouter();
+  const enlaces = usuario?.rol === "entrenador" ? enlacesEntrenador : enlacesAtleta;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-5 py-6">
