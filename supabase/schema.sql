@@ -99,6 +99,15 @@ alter table medidas enable row level security;
 alter table entrenos enable row level security;
 alter table planes enable row level security;
 alter table plan_semanas enable row level security;
+-- Sin políticas: nadie puede leer ni escribir hasta definirlas (se usarán en la fase de tribus).
+alter table tribus enable row level security;
+alter table tribu_miembros enable row level security;
+
+-- Las funciones solo las pueden ejecutar usuarios con sesión iniciada.
+revoke execute on function es_entrenador_de(uuid) from public, anon;
+revoke execute on function vincular_entrenador(text) from public, anon;
+grant execute on function es_entrenador_de(uuid) to authenticated;
+grant execute on function vincular_entrenador(text) to authenticated;
 
 create policy "propio" on usuarios for all using (id = auth.uid()) with check (id = auth.uid());
 create policy "entrenador ve a sus alumnos" on usuarios for select using (entrenador_id = auth.uid());
