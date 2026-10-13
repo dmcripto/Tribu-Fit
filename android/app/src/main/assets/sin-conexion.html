@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sin conexión</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; background: #0a0a0a; color: #ededed; font-family: Arial, Helvetica, sans-serif; }
+  main { min-height: 100%; box-sizing: border-box; padding: 24px; display: flex; flex-direction: column; justify-content: center; gap: 16px; max-width: 28rem; margin: 0 auto; }
+  h1 { margin: 0; font-size: 2.4rem; line-height: 1; text-transform: uppercase; font-weight: 900; }
+  h1 span { color: #ea580c; }
+  p { margin: 0; color: #a1a1aa; line-height: 1.5; }
+  button { align-self: flex-start; border: 0; border-radius: 8px; background: #ea580c; color: #fff; font: 700 1rem Arial, sans-serif; padding: 14px 22px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sin <span>conexión</span></h1>
+  <p>No pudimos conectar con Tribu Fit. Revisa tu internet y vuelve a intentarlo. Tus datos están a salvo.</p>
+  <button type="button" onclick="reintentar()">Reintentar</button>
+</main>
+<script>
+  function reintentar() {
+    if (window.TribuFitApp && window.TribuFitApp.reintentar) window.TribuFitApp.reintentar();
+    else location.reload();
+  }
+</script>
+</body>
+</html>

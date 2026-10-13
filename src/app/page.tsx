@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import DescargaApk from "@/components/DescargaApk";
 import RedirigirAuth from "@/components/RedirigirAuth";
 
 const tribus = [
@@ -52,6 +53,7 @@ export default function Home() {
           </article>
         ))}
       </section>
+      <DescargaApk enlaceDetalle />
       <footer className="flex flex-wrap gap-4 border-t border-zinc-200 pt-4 text-sm text-zinc-500 dark:border-zinc-800">
         <Link href="/terminos" className="underline">Términos de uso</Link>
         <Link href="/privacidad" className="underline">Política de privacidad</Link>

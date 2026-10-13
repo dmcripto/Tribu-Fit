@@ -74,3 +74,10 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 ## Migraciones de base de datos
 
 `supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`).
+
+## App móvil (PWA y APK)
+
+- **PWA**: `manifest.webmanifest`, iconos, service worker (`public/sw.js`, solo estáticos + `/offline`) y botón de instalación en `/descargar`.
+- **APK Android** (`android/`): envoltorio WebView que abre `/ir`. Se compila sin Android Studio con `cd android && bash build-apk.sh` (descarga herramientas fijadas por SHA-256; crea `android/claves/` la primera vez).
+  **Guarda `android/claves/` (git-ignorado): las actualizaciones deben firmarse con la misma clave.**
+- **Publicar una versión**: compilar y luego `node scripts/publicar-apk.mjs android/build/tribu-fit-X.Y.Z.apk <SHA256_certificado>`; copia el APK a `public/` y actualiza `src/lib/apk.json`. La web lo ofrece en `/descargar` y en la portada.

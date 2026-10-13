@@ -35,7 +35,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pendientes = usePropuestasPendientes(usuario);
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-28 pt-4 sm:px-5 md:pb-8">
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-28 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5 md:pb-8">
       <header className="flex items-center justify-between gap-3">
         <Link href="/" aria-label="Tribu Fit, inicio" className="shrink-0">
           <Image src="/logo.png" alt="Tribu Fit" width={44} height={44} />
