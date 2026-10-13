@@ -112,3 +112,7 @@ Cada 30 días el alumno sube 3 fotos (frente, perfil, espalda) en **Progreso**; 
 ## Foto de perfil (migración 011)
 
 Cada persona sube su foto en **Cuenta → Foto de perfil** (se reduce a 256 px). Se ve en el menú, la entrenadora la ve en la lista de alumnos, la ficha y el chat, y el alumno ve la de su entrenadora en el chat (función `mi_entrenador`). Sin la migración 011 todo sigue funcionando con la inicial del nombre.
+
+## Revisar la configuración
+
+`/api/salud` devuelve solo sí/no (sin claves) con el estado de las variables de entorno y de las tablas/columnas de las migraciones 007–011. Debe mostrar `"ok":true`. Guía completa para cargar las variables en Vercel: ver `out/` no versionado; las variables están descritas en `.env.example`.
