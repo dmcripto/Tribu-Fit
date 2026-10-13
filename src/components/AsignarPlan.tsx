@@ -4,7 +4,7 @@ import { useState } from "react";
 import CampoTexto from "@/components/CampoTexto";
 import { RUTINAS, formatoFecha, type Rutina } from "@/lib/datos";
 import type { NuevoPlan } from "@/lib/repo";
-import type { Alumno } from "@/lib/types";
+import type { Alumno, ContenidoRutinas } from "@/lib/types";
 
 type Ejercicio = { id: string; nombre: string; series: string; carga: string };
 type RutinaEd = { uid: string; nombre: string; detalle: string; ejercicios: Ejercicio[] };
@@ -33,20 +33,44 @@ function seleccionInicial(): string[] {
   return claves;
 }
 
+/** Convierte un borrador en rutinas editables y las semanas en las que aparece cada una. */
+function desdeBorrador(b: ContenidoRutinas) {
+  const unicas = new Map<string, RutinaEd>();
+  const marcadas: string[] = [];
+  for (const s of b.semanas) {
+    for (const r of s.rutinas) {
+      const clave = JSON.stringify([r.nombre, r.detalle, r.ejercicios]);
+      let ed = unicas.get(clave);
+      if (!ed) {
+        ed = { uid: `b-${unicas.size}`, nombre: r.nombre, detalle: r.detalle, ejercicios: r.ejercicios.map((e) => ({ id: nuevoId(), ...e })) };
+        unicas.set(clave, ed);
+      }
+      marcadas.push(`${s.semana}-${ed.uid}`);
+    }
+  }
+  const rutinas = [...unicas.values()];
+  const enTodas = rutinas.every((r) => b.semanas.every((s) => marcadas.includes(`${s.semana}-${r.uid}`)));
+  return { rutinas, marcadas, semanas: b.semanas.length, porSemana: !enTodas };
+}
+
 type Props = {
   alumno: Alumno;
   hoy: string;
   asignar: (p: NuevoPlan) => Promise<string | null>;
+  /** Plan de partida (por ejemplo, una propuesta automática) que la entrenadora puede editar. */
+  borrador?: ContenidoRutinas;
+  /** Se llama cuando el plan se asignó con éxito. */
+  alAsignar?: () => void;
 };
 
-export default function AsignarPlan({ alumno, hoy, asignar }: Props) {
-  const [nombre, setNombre] = useState("Plan de 4 semanas");
-  const [semanas, setSemanas] = useState(4);
+export default function AsignarPlan({ alumno, hoy, asignar, borrador, alAsignar }: Props) {
+  const [nombre, setNombre] = useState(borrador?.nombre ?? "Plan de 4 semanas");
+  const [semanas, setSemanas] = useState(borrador ? borrador.semanas.length : 4);
   const [inicio, setInicio] = useState(hoy);
-  const [rutinas, setRutinas] = useState<RutinaEd[]>(inicial);
-  const [marcadas, setMarcadas] = useState<string[]>(seleccionInicial);
+  const [rutinas, setRutinas] = useState<RutinaEd[]>(() => (borrador ? desdeBorrador(borrador).rutinas : inicial()));
+  const [marcadas, setMarcadas] = useState<string[]>(() => (borrador ? desdeBorrador(borrador).marcadas : seleccionInicial()));
   const [editando, setEditando] = useState(false);
-  const [porSemana, setPorSemana] = useState(false);
+  const [porSemana, setPorSemana] = useState(() => (borrador ? desdeBorrador(borrador).porSemana : false));
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -101,6 +125,7 @@ export default function AsignarPlan({ alumno, hoy, asignar }: Props) {
     setEnviando(true);
     const fallo = await asignar({ alumno_id: alumno.id, nombre: nombre.trim(), fecha_inicio: fecha, semanas: lista });
     setEnviando(false);
+    if (!fallo) alAsignar?.();
     setMsg(
       fallo
         ? { ok: false, texto: fallo }

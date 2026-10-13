@@ -1,4 +1,4 @@
-import type { Comida, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PremiumModo } from "./types";
+import type { Comida, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PerfilFitness, PremiumModo, Propuesta } from "./types";
 
 export const MEDIDAS_KEY = "tf_medidas";
 export const ENTRENOS_KEY = "tf_entrenos";
@@ -249,3 +249,23 @@ export const PREMIUM_TEXTO: Record<PremiumMotivo, string> = {
   vencido: "Bloqueado: cuota vencida",
   sin_pagos: "Bloqueado: sin pagos",
 };
+
+/* ---------- Perfil y propuestas automáticas ---------- */
+
+export const PERFILES_KEY = "tf_perfiles";
+export const PROPUESTAS_KEY = "tf_propuestas";
+export const VACIO_PERFILES: Record<string, PerfilFitness> = {};
+export const VACIO_PROPUESTAS: Propuesta[] = [];
+
+/** Días que una propuesta rechazada o aprobada frena que se genere otra igual. */
+export const DIAS_SIN_REPETIR = { rechazada: 7, aprobada: 14 };
+
+/** Resumen de una línea del contenido de una propuesta. */
+export function resumenPropuesta(p: Propuesta): string {
+  if (p.tipo === "nutricion") {
+    const c = p.contenido;
+    return `${c.kcal} kcal · proteína ${c.proteina} g · carbohidratos ${c.carbos} g · grasas ${c.grasas} g`;
+  }
+  const s1 = p.contenido.semanas[0]?.rutinas ?? [];
+  return `${p.contenido.semanas.length} semanas · ${s1.length} sesiones por semana · ${s1.map((r) => r.nombre).join(", ")}`;
+}

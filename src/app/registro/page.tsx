@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CampoClave from "@/components/CampoClave";
 import CampoTexto from "@/components/CampoTexto";
-import { registrar } from "@/lib/auth";
+import { registrar, rutaInicial } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
 
 const objetivos = ["Perder grasa", "Ganar músculo", "Correr más", "Estar activo"];
@@ -52,7 +52,7 @@ export default function Registro() {
     setEnviando(false);
     if (res.error) return setError(res.error);
     if (res.aviso) return setAviso(res.aviso);
-    router.push("/panel");
+    router.push(rutaInicial());
   }
 
   return (

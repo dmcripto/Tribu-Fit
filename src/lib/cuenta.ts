@@ -46,13 +46,13 @@ export async function exportarDatos(usuario: Usuario): Promise<Record<string, un
       if (!data || data.length < 1000) return filas;
     }
   };
-  const [perfil, permisos, medidas, entrenos, comidas, agua, pagos, planes, objetivo, cobro] = await Promise.all([
-    pedir("usuarios", "id"), pedir("consentimientos", "usuario_id"), pedir("medidas", "usuario_id"),
+  const [perfil, permisos, perfilEntrenamiento, medidas, entrenos, comidas, agua, pagos, planes, objetivo, cobro] = await Promise.all([
+    pedir("usuarios", "id"), pedir("consentimientos", "usuario_id"), pedir("perfiles_fitness", "alumno_id"), pedir("medidas", "usuario_id"),
     pedir("entrenos", "usuario_id"), pedir("comidas", "usuario_id"), pedir("agua", "usuario_id"),
     pedir("pagos", "alumno_id"), pedir("planes", "alumno_id"), pedir("nutricion_objetivos", "alumno_id"),
     usuario.rol === "entrenador" ? pedir("pago_config", "entrenador_id") : Promise.resolve([]),
   ]);
-  return { ...base, datos: { perfil, permisos, medidas, entrenos, comidas, agua, pagos, planes, objetivo_nutricion: objetivo, cobro } };
+  return { ...base, datos: { perfil, permisos, perfil_entrenamiento: perfilEntrenamiento, medidas, entrenos, comidas, agua, pagos, planes, objetivo_nutricion: objetivo, cobro } };
 }
 
 /** Descarga un objeto como archivo JSON. */

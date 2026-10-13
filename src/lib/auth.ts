@@ -7,6 +7,16 @@ import type { Rol, Usuario } from "./types";
 
 export const USER_KEY = "tf_user";
 export const AVISO_KEY = "tf_aviso";
+
+/** Pantalla a la que se va tras entrar: la entrenadora, a sus alumnos; el alumno, a su inicio. */
+export function rutaInicial(): string {
+  try {
+    const u = JSON.parse(localStorage.getItem("tf_user") ?? "null") as { rol?: string } | null;
+    return u?.rol === "entrenador" ? "/entrenador" : "/panel";
+  } catch {
+    return "/panel";
+  }
+}
 const CUENTA_DEMO_KEY = "tf_demo_cuenta";
 
 export type Registro = {

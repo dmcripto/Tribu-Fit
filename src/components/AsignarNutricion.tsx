@@ -8,6 +8,10 @@ type Props = {
   alumno: Alumno;
   actual: ObjetivoNutricion | undefined;
   asignar: (alumnoId: string, o: ObjetivoNutricion) => Promise<string | null>;
+  /** Objetivo de partida (por ejemplo, una propuesta automática) que la entrenadora puede editar. */
+  borrador?: ObjetivoNutricion;
+  /** Se llama cuando el objetivo se guardó con éxito. */
+  alAsignar?: () => void;
 };
 
 type Texto = Record<"kcal" | "proteina" | "carbos" | "grasas" | "agua", string>;
@@ -25,11 +29,11 @@ const CAMPOS: { k: keyof Texto; etiqueta: string }[] = [
   { k: "agua", etiqueta: "Agua (vasos)" },
 ];
 
-export default function AsignarNutricion({ alumno, actual, asignar }: Props) {
+export default function AsignarNutricion({ alumno, actual, asignar, borrador, alAsignar }: Props) {
   const pesoActual = [...alumno.medidas].sort((a, b) => a.fecha.localeCompare(b.fecha)).at(-1)?.peso_kg;
   const estimado = estimarObjetivo(pesoActual, alumno.objetivo);
-  const [valores, setValores] = useState<Texto>(aTexto(actual ?? estimado));
-  const [notas, setNotas] = useState(actual?.notas ?? "");
+  const [valores, setValores] = useState<Texto>(aTexto(borrador ?? actual ?? estimado));
+  const [notas, setNotas] = useState(borrador?.notas ?? actual?.notas ?? "");
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -53,6 +57,7 @@ export default function AsignarNutricion({ alumno, actual, asignar }: Props) {
       grasas: Math.round(grasas), agua: Math.round(agua), notas: notas.trim(),
     });
     setEnviando(false);
+    if (!fallo) alAsignar?.();
     setMsg(fallo ? { ok: false, texto: fallo } : { ok: true, texto: "Objetivo guardado. El alumno lo verá en su pestaña Nutrición." });
   }
 

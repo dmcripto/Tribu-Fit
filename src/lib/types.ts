@@ -50,6 +50,7 @@ export type Alumno = {
   id: string;
   nombre: string;
   objetivo: string;
+  nivel?: string;
   /** Si el alumno permite al entrenador ver sus datos. */
   permiso: boolean;
   medidas: Medida[];
@@ -89,3 +90,40 @@ export type Pago = {
   vence?: string;
   creado: string;
 };
+
+/* ---------- Perfil de entrenamiento y propuestas automáticas ---------- */
+
+export type Sexo = "mujer" | "hombre" | "no_dice";
+export type Lugar = "casa" | "gimnasio";
+
+/** Datos que el alumno aporta para que el sistema pueda personalizar su plan. */
+export type PerfilFitness = {
+  edad: number | null;
+  sexo: Sexo;
+  altura_cm: number | null;
+  dias_semana: number;
+  lugar: Lugar;
+  lesiones: string;
+  restricciones: string;
+};
+
+export type ContenidoRutinas = {
+  nombre: string;
+  semanas: { semana: number; rutinas: { nombre: string; detalle: string; ejercicios: { nombre: string; series: string; carga: string }[] }[] }[];
+};
+
+type BasePropuesta = {
+  id: string;
+  alumno_id: string;
+  /** Por qué el sistema propone esto. Solo lo ve la entrenadora. */
+  razones: string[];
+  /** Cosas que la entrenadora debe revisar con especial cuidado. */
+  avisos: string[];
+  estado: "pendiente" | "aprobada" | "rechazada";
+  creado: string;
+};
+
+/** Borrador generado automáticamente. Lo ve y lo valida la entrenadora antes de llegar al alumno. */
+export type Propuesta =
+  | (BasePropuesta & { tipo: "rutinas"; contenido: ContenidoRutinas })
+  | (BasePropuesta & { tipo: "nutricion"; contenido: ObjetivoNutricion });

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CampoClave from "@/components/CampoClave";
 import CampoTexto from "@/components/CampoTexto";
-import { entrar } from "@/lib/auth";
+import { entrar, rutaInicial } from "@/lib/auth";
 
 export default function Login() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function Login() {
     const res = await entrar(email, password);
     setEnviando(false);
     if (res.error) return setError(res.error);
-    router.push("/panel");
+    router.push(rutaInicial());
   }
 
   return (

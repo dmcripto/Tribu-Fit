@@ -1,15 +1,20 @@
 "use client";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AGUA_KEY, COMIDAS_KEY, ENTRENOS_KEY, MEDIDAS_KEY, NUTRI_KEY, PAGOS_KEY, PAGO_CONFIG_KEY, PLANES_KEY,
+  AGUA_KEY, COMIDAS_KEY, DIAS_SIN_REPETIR, ENTRENOS_KEY, MEDIDAS_KEY, NUTRI_KEY, PAGOS_KEY, PAGO_CONFIG_KEY,
+  PERFILES_KEY, PLANES_KEY, PROPUESTAS_KEY, VACIO_PERFILES, VACIO_PROPUESTAS, planTerminado,
   GRACIA_POR_DEFECTO, PREMIUM_EXC_KEY, VACIO_AGUA, VACIO_COMIDAS, VACIO_ENTRENOS, VACIO_EXC, VACIO_MEDIDAS,
   VACIO_NUTRI, VACIO_PAGOS, VACIO_PLANES, estadoPremium, sumarDias, type EstadoPremium, type Plan, type SemanaPlan,
 } from "./datos";
 import { modoDemo, supabase } from "./supabase";
 import { useLocal, useToday } from "./store";
-import type { Alumno, Comida, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PagoConfig, PremiumModo, Usuario } from "./types";
+import { generarNutricion, generarPlan, type DatosAlumno } from "./motor";
+import type {
+  Alumno, Comida, ContenidoRutinas, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PagoConfig, PerfilFitness,
+  PremiumModo, Propuesta, Usuario,
+} from "./types";
 
 const db = () => supabase as SupabaseClient;
 
@@ -285,9 +290,34 @@ export type Cartera = {
   excepciones: Record<string, PremiumModo>;
   /** null deja al alumno en automático (según sus pagos). */
   fijarExcepcion: (alumnoId: string, modo: PremiumModo | null) => Promise<string | null>;
+  /** Perfil de entrenamiento de cada alumno que se lo permite a la entrenadora. */
+  perfiles: Record<string, PerfilFitness>;
+  /** Borradores automáticos pendientes y los resueltos recientemente. Solo los ve la entrenadora. */
+  propuestas: Propuesta[];
+  /** Guarda un borrador. Con `reemplazar` sustituye el pendiente del mismo alumno y tipo. */
+  crearPropuesta: (p: NuevaPropuesta, reemplazar?: boolean) => Promise<string | null>;
+  resolverPropuesta: (id: string, estado: "aprobada" | "rechazada") => Promise<string | null>;
 };
 
+export type NuevaPropuesta =
+  | { alumno_id: string; tipo: "rutinas"; contenido: ContenidoRutinas; razones: string[]; avisos: string[] }
+  | { alumno_id: string; tipo: "nutricion"; contenido: ObjetivoNutricion; razones: string[]; avisos: string[] };
+
 const SIN_ALUMNOS: Alumno[] = [];
+const SIN_PERFILES: Record<string, PerfilFitness> = {};
+const SIN_PROPUESTAS: Propuesta[] = [];
+
+/** Avisa a la barra de navegación de que cambió el número de propuestas pendientes. */
+const avisarPropuestas = () => {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("tf-propuestas"));
+};
+
+/** Perfiles de los alumnos de ejemplo del modo demo. */
+const PERFILES_MUESTRA: Record<string, PerfilFitness> = {
+  "ejemplo-lucia": { edad: 34, sexo: "mujer", altura_cm: 163, dias_semana: 3, lugar: "casa", lesiones: "Molestia en la rodilla derecha", restricciones: "" },
+  "ejemplo-andres": { edad: 41, sexo: "hombre", altura_cm: 178, dias_semana: 4, lugar: "gimnasio", lesiones: "", restricciones: "Intolerancia a la lactosa" },
+  "ejemplo-ivan": { edad: 26, sexo: "hombre", altura_cm: 180, dias_semana: 5, lugar: "gimnasio", lesiones: "", restricciones: "" },
+};
 
 function muestra(hoy: string): Alumno[] {
   if (!hoy) return [];
@@ -299,7 +329,7 @@ function muestra(hoy: string): Alumno[] {
   });
   return [
     {
-      id: "ejemplo-lucia", nombre: "Lucía Ramos (ejemplo)", objetivo: "Perder grasa", permiso: true, ejemplo: true,
+      id: "ejemplo-lucia", nombre: "Lucía Ramos (ejemplo)", objetivo: "Perder grasa", nivel: "Principiante", permiso: true, ejemplo: true,
       medidas: [
         { fecha: d(42), peso_kg: 71.2 }, { fecha: d(28), peso_kg: 70.9 },
         { fecha: d(14), peso_kg: 70.8 }, { fecha: d(10), peso_kg: 70.8 },
@@ -308,7 +338,7 @@ function muestra(hoy: string): Alumno[] {
       comidas: [c(3, 1450, 80), c(2, 1520, 85), c(1, 1480, 78)],
     },
     {
-      id: "ejemplo-andres", nombre: "Andrés Soto (ejemplo)", objetivo: "Correr más", permiso: true, ejemplo: true,
+      id: "ejemplo-andres", nombre: "Andrés Soto (ejemplo)", objetivo: "Correr más", nivel: "Intermedio", permiso: true, ejemplo: true,
       medidas: [
         { fecha: d(40), peso_kg: 84.0 }, { fecha: d(26), peso_kg: 83.6 }, { fecha: d(12), peso_kg: 83.7 }, { fecha: d(5), peso_kg: 83.6 },
       ],
@@ -316,7 +346,7 @@ function muestra(hoy: string): Alumno[] {
       comidas: [c(4, 2250, 110), c(3, 2310, 120)],
     },
     {
-      id: "ejemplo-ivan", nombre: "Iván Cano (ejemplo)", objetivo: "Ganar músculo", permiso: true, ejemplo: true,
+      id: "ejemplo-ivan", nombre: "Iván Cano (ejemplo)", objetivo: "Ganar músculo", nivel: "Avanzado", permiso: true, ejemplo: true,
       medidas: [
         { fecha: d(42), peso_kg: 76.0 }, { fecha: d(28), peso_kg: 76.9 }, { fecha: d(14), peso_kg: 77.6 }, { fecha: d(1), peso_kg: 78.4 },
       ],
@@ -334,11 +364,15 @@ function useCarteraLocal(yo: Usuario | null): Cartera {
   const [comidas] = useLocal(COMIDAS_KEY, VACIO_COMIDAS);
   const [objetivos, setObjetivos] = useLocal(NUTRI_KEY, VACIO_NUTRI);
   const [excepciones, setExcepciones] = useLocal(PREMIUM_EXC_KEY, VACIO_EXC);
+  const [perfilesGuardados] = useLocal(PERFILES_KEY, VACIO_PERFILES);
+  const [propuestas, setPropuestas] = useLocal(PROPUESTAS_KEY, VACIO_PROPUESTAS);
+
+  const perfiles = useMemo(() => ({ ...PERFILES_MUESTRA, ...perfilesGuardados }), [perfilesGuardados]);
 
   const alumnos = useMemo<Alumno[]>(() => {
     if (!yo) return SIN_ALUMNOS;
     const mio: Alumno = {
-      id: yo.id, nombre: `${yo.nombre} (tú, cuenta demo)`, objetivo: yo.objetivo,
+      id: yo.id, nombre: `${yo.nombre} (tú, cuenta demo)`, objetivo: yo.objetivo, nivel: yo.nivel,
       permiso: true, medidas, entrenos, comidas,
     };
     return [mio, ...muestra(hoy)];
@@ -363,23 +397,41 @@ function useCarteraLocal(yo: Usuario | null): Cartera {
     return null as string | null;
   }, [setExcepciones]);
 
-  return { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion };
+  const crearPropuesta = useCallback(async (p: NuevaPropuesta, reemplazar = false) => {
+    setPropuestas((prev) => {
+      const pendiente = (x: Propuesta) => x.alumno_id === p.alumno_id && x.tipo === p.tipo && x.estado === "pendiente";
+      if (!reemplazar && prev.some(pendiente)) return prev;
+      const nueva = { ...p, id: crypto.randomUUID(), estado: "pendiente", creado: new Date().toISOString() } as Propuesta;
+      return [...prev.filter((x) => !pendiente(x)), nueva];
+    });
+    return null as string | null;
+  }, [setPropuestas]);
+
+  const resolverPropuesta = useCallback(async (id: string, estado: "aprobada" | "rechazada") => {
+    setPropuestas((prev) => prev.map((x) => (x.id === id ? { ...x, estado } : x)));
+    return null as string | null;
+  }, [setPropuestas]);
+
+  return {
+    alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion,
+    perfiles, propuestas, crearPropuesta, resolverPropuesta,
+  };
 }
 
 function useCarteraRemota(yo: Usuario | null): Cartera {
   const coach = yo?.id ?? "";
   const cargar = useCallback(async (): Promise<{
     alumnos: Alumno[]; planes: Plan[]; objetivos: Record<string, ObjetivoNutricion>;
-    excepciones: Record<string, PremiumModo>;
+    excepciones: Record<string, PremiumModo>; perfiles: Record<string, PerfilFitness>; propuestas: Propuesta[];
   }> => {
-    if (!coach) return { alumnos: [], planes: [], objetivos: {}, excepciones: {} };
+    if (!coach) return { alumnos: [], planes: [], objetivos: {}, excepciones: {}, perfiles: {}, propuestas: [] };
     // Sin filtrar por lista de alumnos: las reglas de privacidad (RLS) ya limitan cada
     // consulta a los alumnos de esta entrenadora. Se pagina de 1.000 en 1.000 y se
     // acota la historia para que funcione con cualquier número de alumnos.
     const hace = (dias: number) => new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10);
-    const [us, cons, med, ent, pla, com, obj, exc] = await Promise.all([
-      traerTodo<{ id: string; nombre: string; objetivo: string | null }>((a, b) =>
-        db().from("usuarios").select("id,nombre,objetivo").eq("entrenador_id", coach).order("nombre").order("id").range(a, b)),
+    const [us, cons, med, ent, pla, com, obj, exc, per, pro] = await Promise.all([
+      traerTodo<{ id: string; nombre: string; objetivo: string | null; nivel: string | null }>((a, b) =>
+        db().from("usuarios").select("id,nombre,objetivo,nivel").eq("entrenador_id", coach).order("nombre").order("id").range(a, b)),
       traerTodo<{ usuario_id: string; comparte_con_entrenador: boolean }>((a, b) =>
         db().from("consentimientos").select("usuario_id,comparte_con_entrenador").order("usuario_id").range(a, b)),
       traerTodo<{ usuario_id: string; fecha: string; peso_kg: number | string; grasa_pct: number | string | null; cintura_cm: number | string | null }>((a, b) =>
@@ -394,6 +446,11 @@ function useCarteraRemota(yo: Usuario | null): Cartera {
         db().from("nutricion_objetivos").select("alumno_id,kcal,proteina_g,carbos_g,grasas_g,agua_vasos,notas").eq("entrenador_id", coach).order("alumno_id").range(a, b)),
       traerTodo<{ alumno_id: string; modo: PremiumModo }>((a, b) =>
         db().from("premium_excepciones").select("alumno_id,modo").eq("entrenador_id", coach).order("alumno_id").range(a, b)),
+      traerTodo<FilaPerfil>((a, b) =>
+        db().from("perfiles_fitness").select("alumno_id,edad,sexo,altura_cm,dias_semana,lugar,lesiones,restricciones").order("alumno_id").range(a, b)),
+      traerTodo<FilaPropuesta>((a, b) =>
+        db().from("propuestas").select("id,alumno_id,tipo,contenido,razones,avisos,estado,creado")
+          .eq("entrenador_id", coach).gte("creado", hace(60)).order("id").range(a, b)),
     ]);
 
     const agrupar = <T,>(filas: T[], clave: (f: T) => string) => {
@@ -414,6 +471,7 @@ function useCarteraRemota(yo: Usuario | null): Cartera {
       id: u.id,
       nombre: u.nombre,
       objetivo: u.objetivo ?? "",
+      nivel: u.nivel ?? "",
       permiso: conPermiso.has(u.id),
       medidas: (medPor.get(u.id) ?? []).map((m) => ({
         fecha: m.fecha,
@@ -428,9 +486,14 @@ function useCarteraRemota(yo: Usuario | null): Cartera {
     for (const o of obj) objetivos[o.alumno_id] = aObjetivo(o);
     const excepciones: Record<string, PremiumModo> = {};
     for (const x of exc) excepciones[x.alumno_id] = x.modo;
-    return { alumnos, planes: pla.map(aPlan), objetivos, excepciones };
+    const perfiles: Record<string, PerfilFitness> = {};
+    for (const x of per) perfiles[x.alumno_id] = aPerfil(x);
+    return { alumnos, planes: pla.map(aPlan), objetivos, excepciones, perfiles, propuestas: pro.map(aPropuesta) };
   }, [coach]);
-  const [datos, recargar] = useRemoto(cargar, { alumnos: SIN_ALUMNOS, planes: VACIO_PLANES, objetivos: VACIO_NUTRI, excepciones: VACIO_EXC });
+  const [datos, recargar] = useRemoto(cargar, {
+    alumnos: SIN_ALUMNOS, planes: VACIO_PLANES, objetivos: VACIO_NUTRI, excepciones: VACIO_EXC,
+    perfiles: SIN_PERFILES, propuestas: SIN_PROPUESTAS,
+  });
 
   const asignar = useCallback(async (p: NuevoPlan) => {
     const { data: plan, error } = await db().from("planes")
@@ -466,9 +529,33 @@ function useCarteraRemota(yo: Usuario | null): Cartera {
     return error ? error.message : null;
   }, [coach, recargar]);
 
+  const crearPropuesta = useCallback(async (p: NuevaPropuesta, reemplazar = false) => {
+    if (reemplazar) {
+      await db().from("propuestas").delete().eq("alumno_id", p.alumno_id).eq("tipo", p.tipo).eq("estado", "pendiente");
+    }
+    const { error } = await db().from("propuestas").insert({
+      alumno_id: p.alumno_id, entrenador_id: coach, tipo: p.tipo, contenido: p.contenido, razones: p.razones, avisos: p.avisos,
+    });
+    // 23505: ya había una pendiente (por ejemplo, abierta en otro dispositivo). No es un error.
+    if (error && error.code !== "23505") return error.message;
+    recargar();
+    avisarPropuestas();
+    return null;
+  }, [coach, recargar]);
+
+  const resolverPropuesta = useCallback(async (id: string, estado: "aprobada" | "rechazada") => {
+    const { error } = await db().from("propuestas").update({ estado, resuelto: new Date().toISOString() }).eq("id", id);
+    if (!error) {
+      recargar();
+      avisarPropuestas();
+    }
+    return error ? error.message : null;
+  }, [recargar]);
+
   return {
     alumnos: datos.alumnos, planes: datos.planes, objetivos: datos.objetivos, asignar, asignarNutricion,
-    excepciones: datos.excepciones, fijarExcepcion,
+    excepciones: datos.excepciones, fijarExcepcion, perfiles: datos.perfiles, propuestas: datos.propuestas,
+    crearPropuesta, resolverPropuesta,
   };
 }
 
@@ -667,4 +754,144 @@ export function usePremium(yo: Usuario | null): EstadoPremium {
     }),
     [pagos, config, excepcion, hoy, yo?.id, yo?.rol],
   );
+}
+
+/* ---------- Perfil de entrenamiento (lo completa el alumno) ---------- */
+
+type FilaPerfil = {
+  alumno_id: string; edad: number | null; sexo: PerfilFitness["sexo"]; altura_cm: number | null;
+  dias_semana: number; lugar: PerfilFitness["lugar"]; lesiones: string | null; restricciones: string | null;
+};
+
+function aPerfil(p: FilaPerfil): PerfilFitness {
+  return {
+    edad: p.edad === null ? null : Number(p.edad), sexo: p.sexo, altura_cm: p.altura_cm === null ? null : Number(p.altura_cm),
+    dias_semana: Number(p.dias_semana), lugar: p.lugar, lesiones: p.lesiones ?? "", restricciones: p.restricciones ?? "",
+  };
+}
+
+type FilaPropuesta = {
+  id: number | string; alumno_id: string; tipo: "rutinas" | "nutricion"; contenido: unknown;
+  razones: string[] | null; avisos: string[] | null; estado: Propuesta["estado"]; creado: string;
+};
+
+function aPropuesta(p: FilaPropuesta): Propuesta {
+  return {
+    id: String(p.id), alumno_id: p.alumno_id, tipo: p.tipo, contenido: p.contenido, razones: p.razones ?? [],
+    avisos: p.avisos ?? [], estado: p.estado, creado: p.creado,
+  } as Propuesta;
+}
+
+type ApiPerfil = { perfil: PerfilFitness | null; guardar: (p: PerfilFitness) => Promise<string | null> };
+const SIN_PERFIL: PerfilFitness | null = null;
+
+function usePerfilLocal(yo: Usuario | null): ApiPerfil {
+  const [mapa, set] = useLocal(PERFILES_KEY, VACIO_PERFILES);
+  const uid = yo?.id ?? "";
+  const guardar = useCallback(async (p: PerfilFitness) => {
+    set((prev) => ({ ...prev, [uid]: p }));
+    return null as string | null;
+  }, [set, uid]);
+  return { perfil: mapa[uid] ?? SIN_PERFIL, guardar };
+}
+
+function usePerfilRemoto(yo: Usuario | null): ApiPerfil {
+  const uid = yo?.id ?? "";
+  const cargar = useCallback(async (): Promise<PerfilFitness | null> => {
+    if (!uid) return null;
+    const { data } = await db().from("perfiles_fitness")
+      .select("alumno_id,edad,sexo,altura_cm,dias_semana,lugar,lesiones,restricciones").eq("alumno_id", uid).maybeSingle();
+    return data ? aPerfil(data as FilaPerfil) : null;
+  }, [uid]);
+  const [perfil, recargar] = useRemoto<PerfilFitness | null>(cargar, SIN_PERFIL);
+  const guardar = useCallback(async (p: PerfilFitness) => {
+    const { error } = await db().from("perfiles_fitness").upsert({
+      alumno_id: uid, edad: p.edad, sexo: p.sexo, altura_cm: p.altura_cm, dias_semana: p.dias_semana, lugar: p.lugar,
+      lesiones: p.lesiones, restricciones: p.restricciones, actualizado: new Date().toISOString(),
+    }, { onConflict: "alumno_id" });
+    if (!error) recargar();
+    return error ? error.message : null;
+  }, [uid, recargar]);
+  return { perfil, guardar };
+}
+
+export const usePerfil: (yo: Usuario | null) => ApiPerfil = modoDemo ? usePerfilLocal : usePerfilRemoto;
+
+/* ---------- Propuestas automáticas (solo la entrenadora) ---------- */
+
+/** Número de propuestas pendientes, para la insignia del menú. Solo cuenta para entrenadoras. */
+function usePendientesLocal(yo: Usuario | null) {
+  const [propuestas] = useLocal(PROPUESTAS_KEY, VACIO_PROPUESTAS);
+  return yo?.rol === "entrenador" ? propuestas.filter((p) => p.estado === "pendiente").length : 0;
+}
+
+function usePendientesRemoto(yo: Usuario | null) {
+  const uid = yo?.rol === "entrenador" ? yo.id : "";
+  const cargar = useCallback(async (): Promise<number> => {
+    if (!uid) return 0;
+    const { count } = await db().from("propuestas").select("id", { count: "exact", head: true }).eq("estado", "pendiente");
+    return count ?? 0;
+  }, [uid]);
+  const [n, recargar] = useRemoto(cargar, 0);
+  useEffect(() => {
+    const f = () => recargar();
+    window.addEventListener("tf-propuestas", f);
+    return () => window.removeEventListener("tf-propuestas", f);
+  }, [recargar]);
+  return n;
+}
+
+export const usePropuestasPendientes: (yo: Usuario | null) => number = modoDemo ? usePendientesLocal : usePendientesRemoto;
+
+/** Reúne los datos de un alumno tal como los necesita el motor de propuestas. */
+export function datosParaMotor(a: Alumno, perfil: PerfilFitness | null, hoy: string): DatosAlumno {
+  return {
+    nombre: a.nombre, objetivo: a.objetivo, nivel: a.nivel ?? "", perfil,
+    medidas: a.medidas, entrenos: a.entrenos, comidas: a.comidas, hoy,
+  };
+}
+
+const haceDias = (fecha: string, hoy: string) => Math.round((Date.parse(hoy) - Date.parse(fecha)) / 86_400_000);
+
+/**
+ * Genera sola los borradores que faltan: plan nuevo cuando el alumno no tiene uno en marcha, y
+ * objetivo de nutrición cuando no tiene o conviene ajustarlo. Corre al abrir la app de la
+ * entrenadora, solo para alumnos que completaron su perfil y le dieron permiso. No repite lo que
+ * ya está pendiente ni lo que se aprobó o rechazó hace poco.
+ */
+export function useAutoPropuestas(c: Cartera, hoy: string, activo: boolean) {
+  const intentadas = useRef(new Set<string>());
+  const { alumnos, perfiles, planes, objetivos, propuestas, crearPropuesta } = c;
+  useEffect(() => {
+    if (!activo || !hoy) return;
+    const reciente = (alumno: string, tipo: Propuesta["tipo"]) =>
+      propuestas.some((p) =>
+        p.alumno_id === alumno && p.tipo === tipo &&
+        (p.estado === "pendiente" || haceDias(p.creado.slice(0, 10), hoy) < DIAS_SIN_REPETIR[p.estado]));
+    for (const a of alumnos) {
+      const perfil = perfiles[a.id];
+      if (!a.permiso || !perfil) continue;
+      const datos = datosParaMotor(a, perfil, hoy);
+
+      const kPlan = `${a.id}:rutinas`;
+      const tienePlan = planes.some((p) => p.alumno_id === a.id && !planTerminado(p, hoy));
+      if (!intentadas.current.has(kPlan) && !tienePlan && !reciente(a.id, "rutinas")) {
+        intentadas.current.add(kPlan);
+        const r = generarPlan(datos);
+        void crearPropuesta({ alumno_id: a.id, tipo: "rutinas", ...r });
+      }
+
+      const kNutri = `${a.id}:nutricion`;
+      if (!intentadas.current.has(kNutri) && !reciente(a.id, "nutricion")) {
+        const r = generarNutricion(datos);
+        const actual = objetivos[a.id];
+        // Con objetivo ya fijado, solo se propone un ajuste si el cálculo difiere de forma clara.
+        const cambia = !actual || Math.abs(r.contenido.kcal - actual.kcal) >= 150 || Math.abs(r.contenido.proteina - actual.proteina) >= 20;
+        if (cambia) {
+          intentadas.current.add(kNutri);
+          void crearPropuesta({ alumno_id: a.id, tipo: "nutricion", ...r });
+        }
+      }
+    }
+  }, [activo, hoy, alumnos, perfiles, planes, objetivos, propuestas, crearPropuesta]);
 }

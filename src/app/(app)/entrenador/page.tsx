@@ -11,7 +11,9 @@ import {
   PREMIUM_TEXTO, estadoAlumno, estadoCuota, estadoPremium, formatoFecha, entrenosSemana, planTerminado,
   promedioNutricion, semanaActual, type Estado,
 } from "@/lib/datos";
-import { useCartera, usePagoConfig, usePagos } from "@/lib/repo";
+import Link from "next/link";
+import { datosParaMotor, useAutoPropuestas, useCartera, usePagoConfig, usePagos } from "@/lib/repo";
+import { generarNutricion, generarPlan } from "@/lib/motor";
 import { useToday } from "@/lib/store";
 import type { Alumno, PremiumModo } from "@/lib/types";
 
@@ -54,12 +56,15 @@ function CodigoInvitacion({ codigo }: { codigo?: string }) {
 export default function Entrenador() {
   const usuario = useUsuario();
   const hoy = useToday();
-  const { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion } = useCartera(usuario);
+  const cartera = useCartera(usuario);
+  const { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion, perfiles, propuestas, crearPropuesta } = cartera;
+  useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador");
   const { config } = usePagoConfig(usuario);
   const { pagos } = usePagos(usuario);
   const [sel, setSel] = useState<string | null>(null);
   const [tab, setTab] = useState("resumen");
   const [aviso, setAviso] = useState<string | null>(null);
+  const [generado, setGenerado] = useState<string | null>(null);
 
   if (usuario?.rol !== "entrenador") {
     return (
@@ -82,10 +87,22 @@ export default function Entrenador() {
     .sort((x, y) => ORDEN[x.estado] - ORDEN[y.estado]);
   const actual: Alumno | undefined = alumnos.find((a) => a.id === sel);
 
+  const pendientesDe = (id: string) => propuestas.filter((p) => p.alumno_id === id && p.estado === "pendiente").length;
+
+  /** Genera ahora la propuesta de un tipo con los datos actuales del alumno (sustituye la pendiente). */
+  async function generarAhora(a: Alumno, tipo: "rutinas" | "nutricion") {
+    const datos = datosParaMotor(a, perfiles[a.id] ?? null, hoy);
+    const fallo = tipo === "rutinas"
+      ? await crearPropuesta({ alumno_id: a.id, tipo, ...generarPlan(datos) }, true)
+      : await crearPropuesta({ alumno_id: a.id, tipo, ...generarNutricion(datos) }, true);
+    setGenerado(fallo ?? "Propuesta lista. Revísala y apruébala en Propuestas.");
+  }
+
   function abrir(id: string) {
     setSel(id);
     setTab("resumen");
     setAviso(null);
+    setGenerado(null);
     window.scrollTo({ top: 0 });
   }
 
@@ -131,13 +148,14 @@ export default function Entrenador() {
                         ? "No comparte su progreso contigo"
                         : `${desde === null ? "Sin entrenos" : desde === 0 ? "Entrenó hoy" : `Último entreno hace ${desde} días`}${ult ? ` · ${coma(ult.peso_kg)} kg` : ""}`}
                     </span>
-                    {config !== null && (
-                      <span>
+                    <span className="flex flex-wrap gap-2">
+                      {config !== null && (
                         <Chip tono={premium.activo ? (premium.motivo === "en_gracia" ? "aviso" : "ok") : "mal"}>
                           Premium: {PREMIUM_TEXTO[premium.motivo]}
                         </Chip>
-                      </span>
-                    )}
+                      )}
+                      {pendientesDe(a.id) > 0 && <Chip tono="aviso">Propuesta por revisar</Chip>}
+                    </span>
                   </button>
                 </li>
               );
@@ -235,6 +253,25 @@ export default function Entrenador() {
             </>
           )}
         </div>
+      )}
+
+      {(tab === "rutinas" || tab === "nutricion") && (
+        <section className="tarjeta flex flex-col items-start gap-2">
+          <h2 className="subtitulo">Propuesta automática</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {perfiles[actual.id]
+              ? "Prepara un borrador con el perfil y el progreso de este alumno. Lo revisas antes de que le llegue."
+              : "Este alumno aún no completó su perfil. Puedes generar un borrador igualmente: usará valores por defecto y te lo marcará como aviso."}
+          </p>
+          <button type="button" className="btn-ghost" onClick={() => generarAhora(actual, tab === "rutinas" ? "rutinas" : "nutricion")}>
+            Generar propuesta de {tab === "rutinas" ? "rutinas" : "nutrición"}
+          </button>
+          {generado && (
+            <p role="status" className="text-sm text-green-700 dark:text-green-400">
+              {generado} <Link href="/propuestas" className="font-bold underline">Ir a Propuestas</Link>
+            </p>
+          )}
+        </section>
       )}
 
       {tab === "rutinas" && (

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { completarDesdeSesion } from "@/lib/auth";
+import { completarDesdeSesion, rutaInicial } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 type Fase = "comprobando" | "error";
@@ -31,7 +31,7 @@ export default function Confirmado() {
         setFase("error");
         return;
       }
-      router.replace("/panel");
+      router.replace(rutaInicial());
     }
 
     // La sesión llega en el enlace; puede tardar un instante en detectarse.

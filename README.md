@@ -33,7 +33,7 @@ Para usar Supabase:
 
 ## Pantallas
 
-`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas`, `/pagos`, `/cuenta`, `/olvide`, `/nueva-clave`, `/terminos`, `/privacidad` y `/entrenador` (solo cuentas de entrenador/a).
+`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas`, `/pagos`, `/propuestas`, `/cuenta`, `/olvide`, `/nueva-clave`, `/terminos`, `/privacidad` y `/entrenador` (solo cuentas de entrenador/a).
 
 ## Entrenador/a y alumnos
 
@@ -44,6 +44,17 @@ Para usar Supabase:
 - Fija el objetivo de nutrición de cada alumno (calorías, macros, agua y notas). Sin objetivo, el alumno ve una estimación orientativa según su peso y objetivo.
 - Ve la media de calorías y proteína que registra cada alumno.
 - Asigna planes de 1, 2, 4 u 8 semanas. La semana N se libera N-1 semanas después del inicio, tanto en la interfaz como en la base de datos.
+
+## Propuestas automáticas (rutinas y nutrición)
+
+Con muchos alumnos no se puede armar cada plan a mano, así que el sistema **genera borradores** y la entrenadora los **valida**:
+
+1. El alumno completa su **perfil de entrenamiento** en Inicio: edad, sexo, altura, días por semana, lugar (casa o gimnasio), molestias o lesiones, y restricciones alimentarias.
+2. Al abrir la app, el sistema prepara, para cada alumno con perfil que le dio permiso, un **plan de 4 semanas** (cuando no tiene uno en marcha) y un **objetivo de nutrición** (cuando no tiene o conviene ajustarlo).
+3. La entrenadora los ve en **Propuestas**: los que traen avisos (lesiones, menores de edad, datos que faltan) aparte, y los limpios listos para **aprobar en bloque**. Puede editar cualquiera antes de enviarlo, o rechazarlo.
+4. **Nada llega al alumno hasta que se aprueba.** El alumno no puede ver ni consultar los borradores (no hay política de acceso para él en la base de datos).
+
+El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, días y lugar de entrenamiento, ejercicios que evitan las zonas con molestias, constancia real de las últimas 4 semanas, tendencia del peso, y la fórmula de Mifflin-St Jeor para las calorías con suelos de seguridad. Cada propuesta explica sus razones. Se puede probar aparte, sin la web.
 
 ## Pagos y sector premium
 
@@ -62,4 +73,4 @@ Para usar Supabase:
 
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`).

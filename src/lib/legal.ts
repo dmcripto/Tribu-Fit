@@ -1,6 +1,6 @@
 /** Versión de los términos y la política. Súbela cuando cambien los textos. */
-export const VERSION_LEGAL = "2026-10";
-export const FECHA_LEGAL = "13 de octubre de 2026";
+export const VERSION_LEGAL = "2026-10.2";
+export const FECHA_LEGAL = "14 de octubre de 2026";
 
 /**
  * Datos del responsable. Se configuran en Vercel (Settings, Environment Variables):

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { salir, USER_KEY } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
+import { usePropuestasPendientes } from "@/lib/repo";
 import { useLocal } from "@/lib/store";
 import type { Usuario } from "@/lib/types";
 
@@ -17,6 +18,7 @@ const enlacesAtleta = [
 ];
 const enlacesEntrenador = [
   { href: "/entrenador", texto: "Alumnos" },
+  { href: "/propuestas", texto: "Propuestas" },
   { href: "/pagos", texto: "Pagos" },
   { href: "/panel", texto: "Inicio" },
 ];
@@ -30,6 +32,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const ruta = usePathname();
   const router = useRouter();
   const enlaces = usuario?.rol === "entrenador" ? enlacesEntrenador : enlacesAtleta;
+  const pendientes = usePropuestasPendientes(usuario);
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-28 pt-4 sm:px-5 md:pb-8">
@@ -58,6 +61,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   }`}
                 >
                   {e.texto}
+                  {e.href === "/propuestas" && pendientes > 0 && (
+                    <span aria-label={`${pendientes} pendientes`} className="ml-1.5 rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] leading-none text-white">{pendientes}</span>
+                  )}
                 </Link>
               );
             })}

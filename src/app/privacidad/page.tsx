@@ -21,7 +21,7 @@ export default function Privacidad() {
       <Seccion titulo="2. Qué datos tratamos">
         <ul className="list-disc space-y-1 pl-5">
           <li><b>Cuenta:</b> nombre, correo electrónico y contraseña. La contraseña se guarda cifrada y nadie puede leerla.</li>
-          <li><b>Salud y condición física:</b> peso, % de grasa, cintura, entrenos realizados, comidas y calorías, agua, objetivo y nivel. Son datos de salud, una categoría especial que protegemos con más cuidado.</li>
+          <li><b>Salud y condición física:</b> peso, % de grasa, cintura, entrenos realizados, comidas y calorías, agua, objetivo y nivel. Si completas tu perfil de entrenamiento, también tu edad, sexo, altura, los días y el lugar donde entrenas, y las molestias, lesiones o restricciones alimentarias que indiques. Son datos de salud, una categoría especial que protegemos con más cuidado.</li>
           <li><b>Pagos:</b> importe, método, número de operación y el comprobante si lo subes, además de las fechas de vencimiento de tu cuota. <b>No guardamos datos de tarjetas.</b></li>
           <li><b>Plan y seguimiento:</b> los planes de rutinas y objetivos de nutrición que tu entrenador/a te asigna.</li>
           <li><b>Técnicos:</b> usamos el almacenamiento de tu navegador para mantener tu sesión. No usamos cookies de publicidad ni de seguimiento.</li>
@@ -33,6 +33,7 @@ export default function Privacidad() {
           <li>Darte el servicio: registrar tu progreso, mostrarte tus rutinas y tu nutrición. Base: ejecución del servicio que pides.</li>
           <li>Tratar tus <b>datos de salud</b>: lo hacemos solo con tu <b>consentimiento explícito</b>, que das al registrarte y puedes retirar cuando quieras.</li>
           <li>Compartir tu progreso con tu entrenador/a o tu tribu: solo si lo permites, y puedes cambiarlo en Cuenta.</li>
+          <li><b>Preparar borradores de plan:</b> con tus datos, el sistema calcula de forma automática un borrador de rutinas y de nutrición. <b>Nunca se te aplica directamente:</b> lo revisa, lo corrige y lo aprueba tu entrenador/a antes de que lo veas. No se toman decisiones sobre ti de forma automática sin esa revisión humana.</li>
           <li>Gestionar tu cuota y el acceso al seguimiento personalizado. Base: ejecución del servicio.</li>
           <li>Cumplir obligaciones legales y proteger la seguridad del servicio.</li>
         </ul>
