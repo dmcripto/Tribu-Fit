@@ -39,6 +39,12 @@ body {
     @apply mb-1 block text-xs font-medium uppercase tracking-wider text-zinc-500;
   }
   .tarjeta {
-    @apply rounded-xl border border-zinc-200 p-5 dark:border-zinc-800;
+    @apply rounded-xl border border-zinc-200 p-4 dark:border-zinc-800 sm:p-5;
+  }
+  .titulo {
+    @apply text-4xl font-black uppercase leading-none sm:text-5xl;
+  }
+  .subtitulo {
+    @apply text-xl font-black uppercase sm:text-2xl;
   }
 }

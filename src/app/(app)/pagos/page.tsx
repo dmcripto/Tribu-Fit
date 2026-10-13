@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import CampoTexto from "@/components/CampoTexto";
+import Chip from "@/components/Chip";
+import Desplegable from "@/components/Desplegable";
+import Pestanas from "@/components/Pestanas";
 import {
   METODOS, PREMIUM_TEXTO, enlaceSeguro, esImagen, estadoCuota, estadoPremium, formatoFecha,
   siguienteVencimiento, type EstadoCuota,
@@ -13,7 +16,7 @@ import PremiumAviso from "@/components/PremiumAviso";
 import { useCartera, usePagoConfig, usePagos, usePremium } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
 import { useToday } from "@/lib/store";
-import type { Metodo, Pago, PagoConfig, PremiumModo, Usuario } from "@/lib/types";
+import type { Metodo, Pago, PagoConfig, Usuario } from "@/lib/types";
 
 const MONEDAS = ["USD", "EUR", "MXN", "COP", "PEN", "ARS", "CLP", "BOB", "DOP", "UYU", "GTQ", "CRC", "PYG", "VES"];
 
@@ -85,38 +88,34 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
   }
 
   const sinVinculo = !modoDemo && !usuario.entrenadorId;
+  const hayTarjeta = !!config && !!config.enlace && enlaceSeguro(config.enlace);
+  const hayQr = !!config && esImagen(config.qr);
+  const metodos = [
+    ...(hayTarjeta ? [{ id: "tarjeta", texto: "Tarjeta" }] : []),
+    ...(hayQr ? [{ id: "qr", texto: "QR" }] : []),
+    { id: "otro", texto: "Transferencia o efectivo" },
+  ];
+  const [metodoElegido, setMetodoElegido] = useState<string | null>(null);
+  const metodoActivo = metodoElegido && metodos.some((m) => m.id === metodoElegido) ? metodoElegido : metodos[0].id;
 
   return (
-    <main className="flex flex-col gap-6">
+    <main className="flex flex-col gap-5">
       <div>
-        <h1 className="text-5xl font-black uppercase leading-none">Pagos</h1>
+        <h1 className="titulo">Pagos</h1>
         <p className="mt-2 text-sm">
-          Tu cuota:{" "}
-          <span className={`font-mono font-bold ${CUOTA[cuota.estado].clase}`}>{CUOTA[cuota.estado].texto}</span>
+          Tu cuota: <Chip tono={cuota.estado === "al_dia" ? "ok" : cuota.estado === "por_vencer" ? "aviso" : cuota.estado === "vencida" ? "mal" : "neutro"}>{CUOTA[cuota.estado].texto}</Chip>
           {cuota.vence && <span className="text-zinc-500"> · cubierta hasta el {formatoFecha(cuota.vence)}</span>}
         </p>
       </div>
 
       <PremiumAviso estado={premium} mostrarActivo sinBoton />
 
-      <section className="tarjeta flex flex-col gap-3">
-        <h2 className="text-2xl font-black uppercase">Sector premium</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Con tu cuota al día tienes seguimiento personalizado de tu entrenador/a:</p>
-        <ul className="grid gap-2 text-sm sm:grid-cols-2">
-          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Plan de rutinas hecho para ti</b>, liberado semana a semana.</li>
-          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Nutrición personalizada</b>: calorías, macros y notas.</li>
-          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Seguimiento de tu progreso</b> por tu entrenador/a, con ajustes.</li>
-          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Aviso si te estancas</b> o dejas de entrenar.</li>
-        </ul>
-        <p className="text-xs text-zinc-500">Si la cuota no se paga a tiempo, el premium se bloquea solo y vuelve en cuanto tu entrenador/a confirma tu pago. Tus medidas, comidas y entrenos nunca se borran.</p>
-      </section>
-
       {sinVinculo ? (
         <section className="tarjeta flex flex-col items-start gap-3">
           <p className="text-zinc-600 dark:text-zinc-400">
-            Aún no estás vinculado/a a un entrenador/a. Escribe su código de invitación en tu Panel para ver cómo pagar.
+            Aún no estás vinculado/a a un entrenador/a. Escribe su código en tu Inicio para ver cómo pagar.
           </p>
-          <Link href="/panel" className="btn-primary">Ir a mi Panel</Link>
+          <Link href="/panel" className="btn-primary">Ir a Inicio</Link>
         </section>
       ) : !config ? (
         <section className="tarjeta">
@@ -124,101 +123,94 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
         </section>
       ) : (
         <>
-          <section className="tarjeta flex flex-col gap-1">
-            <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">Cuota mensual</p>
-            <p className="text-5xl font-black tabular-nums">{dinero(config.precio, config.moneda)}</p>
-            {config.instrucciones && <p className="mt-2 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">{config.instrucciones}</p>}
-          </section>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <section className="tarjeta flex flex-col gap-3">
-              <h2 className="text-2xl font-black uppercase">Tarjeta de débito o crédito</h2>
-              {config.enlace && enlaceSeguro(config.enlace) ? (
+          <section className="tarjeta flex flex-col gap-4">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">Cuota mensual</p>
+              <p className="text-4xl font-black tabular-nums sm:text-5xl">{dinero(config.precio, config.moneda)}</p>
+            </div>
+            <Pestanas etiqueta="Cómo pagar" items={metodos} activa={metodoActivo} onCambia={setMetodoElegido} />
+            <div role="tabpanel" className="flex flex-col items-start gap-3">
+              {metodoActivo === "tarjeta" && (
                 <>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Pagas en la página segura de tu proveedor de pagos. Tribu Fit nunca ve ni guarda los datos de tu tarjeta.
+                    Pagas con tu tarjeta de débito o crédito en la página segura de tu proveedor. Tribu Fit nunca ve ni guarda los datos de tu tarjeta.
                   </p>
-                  <div>
-                    <a href={config.enlace} target="_blank" rel="noopener noreferrer" className="btn-primary">
-                      Pagar con tarjeta
-                    </a>
-                  </div>
-                  <p className="text-xs text-zinc-500">Al terminar, vuelve y avisa tu pago abajo.</p>
+                  <a href={config.enlace} target="_blank" rel="noopener noreferrer" className="btn-primary">Pagar con tarjeta</a>
                 </>
-              ) : (
-                <p className="text-sm text-zinc-500">Tu entrenador/a no tiene activado el pago con tarjeta.</p>
               )}
-            </section>
-
-            <section className="tarjeta flex flex-col items-start gap-3">
-              <h2 className="text-2xl font-black uppercase">Pago con QR</h2>
-              {esImagen(config.qr) ? (
+              {metodoActivo === "qr" && (
                 <>
                   <Imagen src={config.qr} alt="Código QR para pagar a tu entrenador/a" className="aspect-square w-full max-w-64 rounded-lg bg-white object-contain p-2" />
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">Escanéalo con la app de tu banco o billetera y paga {dinero(config.precio, config.moneda)}.</p>
                 </>
-              ) : (
-                <p className="text-sm text-zinc-500">Tu entrenador/a no tiene activado el pago con QR.</p>
               )}
-            </section>
-          </div>
+              {metodoActivo === "otro" && (
+                <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
+                  {config.instrucciones || "Pregunta a tu entrenador/a cómo pagarle por transferencia o en efectivo."}
+                </p>
+              )}
+            </div>
+          </section>
 
-          <form key={formKey} onSubmit={avisar} noValidate className="tarjeta flex flex-col gap-4">
-            <h2 className="text-2xl font-black uppercase">Avisar mi pago</h2>
-            <p className="text-sm text-zinc-500">Cuando pagues, envía el aviso para que tu entrenador/a lo confirme.</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label className="etiqueta" htmlFor="p-metodo">Cómo pagaste</label>
-                <select className="campo" id="p-metodo" name="metodo" defaultValue="qr">
-                  {(Object.keys(METODOS) as Metodo[]).map((m) => <option key={m} value={m}>{METODOS[m]}</option>)}
-                </select>
+          <Desplegable titulo="Ya pagué" detalle="Avisa a tu entrenador/a para que lo confirme" abierto>
+            <form key={formKey} onSubmit={avisar} noValidate className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="etiqueta" htmlFor="p-metodo">Cómo pagaste</label>
+                  <select className="campo" id="p-metodo" name="metodo" defaultValue="qr">
+                    {(Object.keys(METODOS) as Metodo[]).map((m) => <option key={m} value={m}>{METODOS[m]}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="etiqueta" htmlFor="p-monto">Monto ({config.moneda})</label>
+                  <input className="campo" id="p-monto" name="monto" inputMode="decimal" defaultValue={String(config.precio).replace(".", ",")} />
+                </div>
+                <div>
+                  <label className="etiqueta" htmlFor="p-ref">N.º de operación</label>
+                  <CampoTexto id="p-ref" name="referencia" placeholder="Opcional" autoComplete="off" />
+                </div>
               </div>
               <div>
-                <label className="etiqueta" htmlFor="p-monto">Monto ({config.moneda})</label>
-                <input className="campo" id="p-monto" name="monto" inputMode="decimal" defaultValue={String(config.precio).replace(".", ",")} />
+                <label className="etiqueta" htmlFor="p-comp">Comprobante (foto o captura, opcional)</label>
+                <input className="campo" id="p-comp" name="comprobante" type="file" accept="image/png,image/jpeg,image/webp" />
               </div>
-              <div>
-                <label className="etiqueta" htmlFor="p-ref">N.º de operación</label>
-                <CampoTexto id="p-ref" name="referencia" placeholder="Opcional" autoComplete="off" />
-              </div>
-            </div>
-            <div>
-              <label className="etiqueta" htmlFor="p-comp">Comprobante (foto o captura, opcional)</label>
-              <input className="campo" id="p-comp" name="comprobante" type="file" accept="image/png,image/jpeg,image/webp" />
-            </div>
-            <Aviso msg={msg} />
-            <div><button className="btn-primary" disabled={enviando}>{enviando ? "Enviando..." : "Ya pagué"}</button></div>
-          </form>
+              <Aviso msg={msg} />
+              <div><button className="btn-primary" disabled={enviando}>{enviando ? "Enviando..." : "Enviar aviso de pago"}</button></div>
+            </form>
+          </Desplegable>
         </>
       )}
 
-      <section className="tarjeta flex flex-col gap-3">
-        <h2 className="text-2xl font-black uppercase">Mis pagos</h2>
+      <Desplegable titulo={`Mis pagos (${mios.length})`}>
         {mios.length === 0 ? (
           <p className="text-sm text-zinc-500">Aún no hay pagos registrados.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left font-mono text-xs uppercase text-zinc-500">
-                  <th className="p-2">Fecha</th><th className="p-2">Método</th><th className="p-2">Monto</th><th className="p-2">Estado</th><th className="p-2">Cubre hasta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mios.map((p) => (
-                  <tr key={p.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                    <td className="p-2">{formatoFecha(p.creado.slice(0, 10))}</td>
-                    <td className="p-2">{METODOS[p.metodo]}</td>
-                    <td className="p-2 tabular-nums">{dinero(p.monto, p.moneda)}</td>
-                    <td className={`p-2 font-mono text-xs font-bold ${ESTADO_PAGO[p.estado].clase}`}>{ESTADO_PAGO[p.estado].texto}</td>
-                    <td className="p-2">{p.vence ? formatoFecha(p.vence) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="flex flex-col text-sm">
+            {mios.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-zinc-200 py-2 dark:border-zinc-800">
+                <span>
+                  <span className="font-bold tabular-nums">{dinero(p.monto, p.moneda)}</span>
+                  <span className="text-zinc-500"> · {METODOS[p.metodo]} · {formatoFecha(p.creado.slice(0, 10))}</span>
+                </span>
+                <span className="flex items-center gap-2">
+                  {p.vence && <span className="text-xs text-zinc-500">hasta {formatoFecha(p.vence)}</span>}
+                  <Chip tono={p.estado === "confirmado" ? "ok" : p.estado === "pendiente" ? "aviso" : "mal"}>{ESTADO_PAGO[p.estado].texto}</Chip>
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
-      </section>
+      </Desplegable>
+
+      <Desplegable titulo="Qué incluye el premium">
+        <ul className="grid gap-2 text-sm sm:grid-cols-2">
+          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Plan de rutinas hecho para ti</b>, liberado semana a semana.</li>
+          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Nutrición personalizada</b>: calorías, macros y notas.</li>
+          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Seguimiento de tu progreso</b> por tu entrenador/a, con ajustes.</li>
+          <li className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"><b>Aviso si te estancas</b> o dejas de entrenar.</li>
+        </ul>
+        <p className="text-xs text-zinc-500">Si la cuota no se paga a tiempo, el premium se bloquea solo y vuelve en cuanto tu entrenador/a confirma tu pago. Tus medidas, comidas y entrenos nunca se borran.</p>
+      </Desplegable>
     </main>
   );
 }
@@ -270,7 +262,7 @@ function FormCobro({
 
   return (
     <form onSubmit={enviar} noValidate className="tarjeta flex flex-col gap-4">
-      <h2 className="text-2xl font-black uppercase">Tu cobro</h2>
+      <h2 className="subtitulo">Mi cobro</h2>
       <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
         <div>
           <label className="etiqueta" htmlFor="cb-precio">Cuota mensual</label>
@@ -321,24 +313,31 @@ function VistaEntrenador({ usuario }: { usuario: Usuario }) {
   const hoy = useToday();
   const { config, guardar } = usePagoConfig(usuario);
   const { pagos, registrar, resolver } = usePagos(usuario);
-  const { alumnos, excepciones, fijarExcepcion } = useCartera(usuario);
-  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
-  const [manualMsg, setManualMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+  const { alumnos, excepciones } = useCartera(usuario);
+  const [msg, setMsg] = useState<Mensaje>(null);
+  const [manualMsg, setManualMsg] = useState<Mensaje>(null);
   const [cobroMsg, setCobroMsg] = useState<Mensaje>(null);
-  const [accesoMsg, setAccesoMsg] = useState<Mensaje>(null);
+  const [elegida, setElegida] = useState<string | null>(null);
 
   const nombre = (id: string) => alumnos.find((a) => a.id === id)?.nombre ?? "Alumno";
   const pendientes = pagos.filter((p) => p.estado === "pendiente");
   const deAlumno = (id: string) => pagos.filter((p) => p.alumno_id === id);
-  const cuotas = alumnos.map((a) => ({
-    a,
-    ...estadoCuota(deAlumno(a.id), hoy),
-    premium: estadoPremium({
-      pagos: deAlumno(a.id), cobra: config !== null, gracia: config?.gracia ?? 3, excepcion: excepciones[a.id], hoy,
-    }),
-  }));
-  const orden: Record<EstadoCuota, number> = { vencida: 0, por_vencer: 1, sin_pagos: 2, al_dia: 3 };
-  cuotas.sort((x, y) => orden[x.estado] - orden[y.estado]);
+  const cuotas = alumnos
+    .map((a) => ({
+      a,
+      ...estadoCuota(deAlumno(a.id), hoy),
+      premium: estadoPremium({
+        pagos: deAlumno(a.id), cobra: config !== null, gracia: config?.gracia ?? 3, excepcion: excepciones[a.id], hoy,
+      }),
+    }))
+    .sort((x, y) => ({ vencida: 0, por_vencer: 1, sin_pagos: 2, al_dia: 3 }[x.estado] - { vencida: 0, por_vencer: 1, sin_pagos: 2, al_dia: 3 }[y.estado]));
+  // Sin cobro configurado, lo primero es configurarlo.
+  const tab = elegida ?? (config === null ? "cobro" : "cobros");
+  // Al guardar por primera vez se queda en esta pestaña, para ver la confirmación.
+  const guardarYQuedarse = async (c: PagoConfig) => {
+    setElegida("cobro");
+    return guardar(c);
+  };
 
   async function resolverPago(p: Pago, estado: "confirmado" | "rechazado") {
     const vence = estado === "confirmado" ? siguienteVencimiento(deAlumno(p.alumno_id), hoy) : undefined;
@@ -348,11 +347,6 @@ function VistaEntrenador({ usuario }: { usuario: Usuario }) {
         ? { ok: false, texto: fallo }
         : { ok: true, texto: estado === "confirmado" ? `Pago confirmado. ${nombre(p.alumno_id).split(" ")[0]} queda al día hasta el ${formatoFecha(vence as string)}.` : "Pago rechazado." },
     );
-  }
-
-  async function cambiarAcceso(id: string, valor: string) {
-    const fallo = await fijarExcepcion(id, valor === "auto" ? null : (valor as PremiumModo));
-    setAccesoMsg(fallo ? { ok: false, texto: fallo } : { ok: true, texto: "Acceso actualizado." });
   }
 
   async function manual(e: React.FormEvent<HTMLFormElement>) {
@@ -373,122 +367,122 @@ function VistaEntrenador({ usuario }: { usuario: Usuario }) {
   }
 
   return (
-    <main className="flex flex-col gap-6">
+    <main className="flex flex-col gap-5">
       <div>
-        <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">Panel de entrenador/a</p>
-        <h1 className="text-5xl font-black uppercase leading-none">Pagos</h1>
+        <h1 className="titulo">Pagos</h1>
+        {config !== null && (
+          <p className="mt-2 text-sm text-zinc-500">
+            Cuota de {dinero(config.precio, config.moneda)} al mes · {config.gracia} días de gracia
+          </p>
+        )}
       </div>
 
-      {modoDemo && (
-        <p className="rounded-md border border-orange-600/40 px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Datos de ejemplo: los pagos de los alumnos de ejemplo son inventados.
-        </p>
+      <Pestanas
+        etiqueta="Secciones de pagos"
+        activa={tab}
+        onCambia={setElegida}
+        items={[
+          { id: "cobros", texto: "Cobros", aviso: pendientes.length },
+          { id: "cuotas", texto: "Alumnos" },
+          { id: "cobro", texto: "Mi cobro" },
+        ]}
+      />
+
+      {tab === "cobros" && (
+        <div role="tabpanel" className="flex flex-col gap-5">
+          <Aviso msg={msg} />
+          <section className="tarjeta flex flex-col gap-1">
+            <h2 className="subtitulo">Por confirmar</h2>
+            {pendientes.length === 0 ? (
+              <p className="text-sm text-zinc-500">No tienes pagos pendientes.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {pendientes.map((p) => (
+                  <li key={p.id} className="flex flex-col gap-2 border-t border-zinc-200 py-3 dark:border-zinc-800">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="font-bold">{nombre(p.alumno_id)}</span>
+                      <span className="font-mono text-sm tabular-nums">{dinero(p.monto, p.moneda)}</span>
+                    </div>
+                    <p className="text-sm text-zinc-500">
+                      {METODOS[p.metodo]} · {formatoFecha(p.creado.slice(0, 10))}{p.referencia ? ` · operación ${p.referencia}` : ""}
+                    </p>
+                    {esImagen(p.comprobante) && (
+                      <details>
+                        <summary className="cursor-pointer text-sm font-bold text-orange-600">Ver comprobante</summary>
+                        <Imagen src={p.comprobante} alt={`Comprobante de ${nombre(p.alumno_id)}`} className="mt-2 max-h-96 max-w-full rounded-lg border border-zinc-200 dark:border-zinc-800" />
+                      </details>
+                    )}
+                    <div className="flex gap-3">
+                      <button type="button" className="btn-primary" onClick={() => resolverPago(p, "confirmado")}>Confirmar</button>
+                      <button type="button" className="btn-ghost" onClick={() => resolverPago(p, "rechazado")}>Rechazar</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <Desplegable titulo="Registrar un cobro en mano" detalle="Efectivo o transferencia que ya recibiste">
+            <form onSubmit={manual} noValidate className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="etiqueta" htmlFor="m-alumno">Alumno</label>
+                  <select className="campo" id="m-alumno" name="alumno" defaultValue="">
+                    <option value="" disabled>Elige...</option>
+                    {alumnos.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="etiqueta" htmlFor="m-metodo">Método</label>
+                  <select className="campo" id="m-metodo" name="metodo" defaultValue="efectivo">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="etiqueta" htmlFor="m-monto">Monto{config ? ` (${config.moneda})` : ""}</label>
+                  <input className="campo" id="m-monto" name="monto" inputMode="decimal" defaultValue={config ? String(config.precio).replace(".", ",") : ""} key={config?.precio ?? "x"} />
+                </div>
+              </div>
+              <p className="text-sm text-zinc-500">Se confirma al momento y extiende la cuota 30 días.</p>
+              <Aviso msg={manualMsg} />
+              <div><button className="btn-primary">Registrar cobro</button></div>
+            </form>
+          </Desplegable>
+        </div>
       )}
 
-      <FormCobro key={config ? "cargado" : "vacio"} inicial={config} guardar={guardar} msg={cobroMsg} setMsg={setCobroMsg} />
-
-      <section className="tarjeta flex flex-col gap-3">
-        <h2 className="text-2xl font-black uppercase">Pagos por confirmar ({pendientes.length})</h2>
-        <Aviso msg={msg} />
-        {pendientes.length === 0 ? (
-          <p className="text-sm text-zinc-500">No tienes pagos pendientes.</p>
-        ) : (
-          <ul className="flex flex-col">
-            {pendientes.map((p) => (
-              <li key={p.id} className="flex flex-col gap-2 border-t border-zinc-200 py-3 dark:border-zinc-800">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="font-bold">{nombre(p.alumno_id)}</span>
-                  <span className="font-mono text-sm tabular-nums">{dinero(p.monto, p.moneda)} · {METODOS[p.metodo]}</span>
-                </div>
-                <p className="text-sm text-zinc-500">
-                  {formatoFecha(p.creado.slice(0, 10))}{p.referencia ? ` · operación ${p.referencia}` : ""}
-                </p>
-                {esImagen(p.comprobante) && (
-                  <details>
-                    <summary className="cursor-pointer text-sm font-bold text-orange-600">Ver comprobante</summary>
-                    <Imagen src={p.comprobante} alt={`Comprobante de ${nombre(p.alumno_id)}`} className="mt-2 max-h-96 max-w-full rounded-lg border border-zinc-200 dark:border-zinc-800" />
-                  </details>
-                )}
-                <div className="flex gap-3">
-                  <button type="button" className="btn-primary" onClick={() => resolverPago(p, "confirmado")}>Confirmar</button>
-                  <button type="button" className="btn-ghost" onClick={() => resolverPago(p, "rechazado")}>Rechazar</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="tarjeta overflow-x-auto">
-        <h2 className="mb-1 text-2xl font-black uppercase">Cuotas de mis alumnos</h2>
-        <p className="mb-3 text-sm text-zinc-500">
-          El premium se bloquea solo cuando la cuota vence y pasan los días de gracia. También puedes bloquear a alguien a mano o darle cortesía.
-        </p>
-        <Aviso msg={accesoMsg} />
-        {cuotas.length === 0 ? (
-          <p className="text-sm text-zinc-500">Aún no tienes alumnos vinculados.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left font-mono text-xs uppercase text-zinc-500">
-                <th className="p-2">Alumno</th><th className="p-2">Cuota</th><th className="p-2">Cubierta hasta</th>
-                <th className="p-2">Premium</th><th className="p-2">Acceso</th>
-              </tr>
-            </thead>
-            <tbody>
+      {tab === "cuotas" && (
+        <div role="tabpanel" className="flex flex-col gap-3">
+          <p className="text-sm text-zinc-500">
+            El premium se bloquea solo cuando la cuota vence y pasan los días de gracia. Para bloquear a alguien a mano o darle cortesía, abre su ficha en Alumnos y entra en Pago.
+          </p>
+          {cuotas.length === 0 ? (
+            <p className="tarjeta text-sm text-zinc-500">Aún no tienes alumnos vinculados.</p>
+          ) : (
+            <ul className="flex flex-col gap-3">
               {cuotas.map(({ a, estado, vence, premium }) => (
-                <tr key={a.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                  <td className="p-2 font-bold">{a.nombre}</td>
-                  <td className={`p-2 font-mono text-xs font-bold ${CUOTA[estado].clase}`}>{CUOTA[estado].texto}</td>
-                  <td className="p-2">{vence ? formatoFecha(vence) : "—"}</td>
-                  <td className={`p-2 font-mono text-xs font-bold ${premium.activo ? (premium.motivo === "en_gracia" ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400") : "text-red-600"}`}>
-                    {PREMIUM_TEXTO[premium.motivo]}
-                  </td>
-                  <td className="p-2">
-                    <select
-                      className="campo py-1.5 text-sm"
-                      aria-label={`Acceso premium de ${a.nombre}`}
-                      value={excepciones[a.id] ?? "auto"}
-                      onChange={(e) => cambiarAcceso(a.id, e.target.value)}
-                    >
-                      <option value="auto">Automático (según pagos)</option>
-                      <option value="cortesia">Cortesía (premium gratis)</option>
-                      <option value="bloqueado">Bloquear</option>
-                    </select>
-                  </td>
-                </tr>
+                <li key={a.id} className="tarjeta flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-black">{a.nombre}</span>
+                    <Chip tono={estado === "al_dia" ? "ok" : estado === "por_vencer" ? "aviso" : estado === "vencida" ? "mal" : "neutro"}>{CUOTA[estado].texto}</Chip>
+                  </div>
+                  <p className="text-sm text-zinc-500">{vence ? `Cubierta hasta el ${formatoFecha(vence)}` : "Sin pagos confirmados"}</p>
+                  <span>
+                    <Chip tono={premium.activo ? (premium.motivo === "en_gracia" ? "aviso" : "ok") : "mal"}>Premium: {PREMIUM_TEXTO[premium.motivo]}</Chip>
+                  </span>
+                </li>
               ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <form onSubmit={manual} noValidate className="tarjeta flex flex-col gap-4">
-        <h2 className="text-2xl font-black uppercase">Registrar un cobro en mano</h2>
-        <p className="text-sm text-zinc-500">Para efectivo o transferencias que ya recibiste. Se confirma al momento y extiende la cuota 30 días.</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <label className="etiqueta" htmlFor="m-alumno">Alumno</label>
-            <select className="campo" id="m-alumno" name="alumno" defaultValue="">
-              <option value="" disabled>Elige...</option>
-              {alumnos.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="etiqueta" htmlFor="m-metodo">Método</label>
-            <select className="campo" id="m-metodo" name="metodo" defaultValue="efectivo">
-              <option value="efectivo">Efectivo</option>
-              <option value="transferencia">Transferencia</option>
-            </select>
-          </div>
-          <div>
-            <label className="etiqueta" htmlFor="m-monto">Monto{config ? ` (${config.moneda})` : ""}</label>
-            <input className="campo" id="m-monto" name="monto" inputMode="decimal" defaultValue={config ? String(config.precio).replace(".", ",") : ""} key={config?.precio ?? "x"} />
-          </div>
+            </ul>
+          )}
         </div>
-        <Aviso msg={manualMsg} />
-        <div><button className="btn-primary">Registrar cobro</button></div>
-      </form>
+      )}
+
+      {tab === "cobro" && (
+        <div role="tabpanel">
+          <FormCobro key={config ? "cargado" : "vacio"} inicial={config} guardar={guardarYQuedarse} msg={cobroMsg} setMsg={setCobroMsg} />
+        </div>
+      )}
     </main>
   );
 }

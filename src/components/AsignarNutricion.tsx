@@ -60,7 +60,7 @@ export default function AsignarNutricion({ alumno, actual, asignar }: Props) {
   return (
     <form onSubmit={enviar} className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-xl font-black uppercase">Nutrición de {nombre}</h3>
+        <h2 className="subtitulo">Objetivo de {nombre}</h2>
         <button type="button" className="text-sm font-bold text-orange-600" onClick={usarEstimacion}>
           Usar estimación{pesoActual ? ` (${pesoActual} kg)` : ""}
         </button>

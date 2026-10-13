@@ -57,7 +57,7 @@ export default function Registro() {
       <Link href="/" aria-label="Tribu Fit, inicio">
         <Image src="/logo.png" alt="Tribu Fit" width={64} height={64} />
       </Link>
-      <h1 className="text-5xl font-black uppercase leading-none">
+      <h1 className="titulo">
         Crea tu cuenta
       </h1>
       {modoDemo && (

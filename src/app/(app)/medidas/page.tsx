@@ -45,10 +45,10 @@ export default function Medidas() {
 
   return (
     <main className="flex flex-col gap-6">
-      <h1 className="text-5xl font-black uppercase leading-none">Medidas</h1>
+      <h1 className="titulo">Medidas</h1>
       <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
         <form onSubmit={enviar} noValidate className="tarjeta flex flex-col gap-4">
-          <h2 className="text-2xl font-black uppercase">Nuevo registro</h2>
+          <h2 className="subtitulo">Nuevo registro</h2>
           <div>
             <label className="etiqueta" htmlFor="fecha">Fecha</label>
             <input className="campo" id="fecha" name="fecha" type="date" defaultValue={hoy} max={hoy} key={hoy} />
@@ -74,7 +74,7 @@ export default function Medidas() {
 
         <section className="tarjeta flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-2xl font-black uppercase">Evolución del peso</h2>
+            <h2 className="subtitulo">Evolución del peso</h2>
             {primera && ultima && primera !== ultima && (
               <span className="font-mono text-sm text-orange-600">
                 {ultima.peso_kg - primera.peso_kg > 0 ? "+" : ""}

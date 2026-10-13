@@ -30,7 +30,7 @@ function Vinculo() {
   }
   return (
     <form onSubmit={enviar} className="tarjeta flex flex-col gap-3">
-      <h2 className="text-2xl font-black uppercase">Tu entrenador/a</h2>
+      <h2 className="subtitulo">Tu entrenador/a</h2>
       <p className="text-sm text-zinc-500">
         Escribe su código de invitación para compartirle tu progreso y recibir tus planes.
       </p>
@@ -72,7 +72,7 @@ export default function Panel() {
         <p className="font-mono text-xs uppercase tracking-widest text-zinc-500">
           {usuario?.rol === "entrenador" ? "Entrenador/a" : usuario?.objetivo || "Tu progreso"}
         </p>
-        <h1 className="text-5xl font-black uppercase leading-none">
+        <h1 className="titulo">
           Hola, {usuario?.nombre}
         </h1>
       </div>
@@ -85,7 +85,7 @@ export default function Panel() {
       {usuario?.rol === "atleta" && <PremiumAviso estado={premium} mostrarActivo />}
       {usuario?.rol === "entrenador" && (
         <p className="text-sm">
-          <Link href="/entrenador" className="font-bold text-orange-600">Ir a Mis alumnos</Link>
+          <Link href="/entrenador" className="font-bold text-orange-600">Ir a Alumnos</Link>
         </p>
       )}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -98,7 +98,7 @@ export default function Panel() {
         <Dato valor={String(racha(entrenos, hoy))} etiqueta="Días de racha" />
       </div>
       <section className="tarjeta flex flex-col gap-3">
-        <h2 className="text-2xl font-black uppercase">Últimos entrenos</h2>
+        <h2 className="subtitulo">Últimos entrenos</h2>
         {recientes.length === 0 ? (
           <p className="text-sm text-zinc-500">
             Aún no has registrado entrenos.{" "}

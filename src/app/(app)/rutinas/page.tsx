@@ -58,7 +58,7 @@ export default function Rutinas() {
     <main className="flex flex-col gap-6">
       <PremiumAviso estado={premium} />
       <div>
-        <h1 className="text-5xl font-black uppercase leading-none">Rutinas</h1>
+        <h1 className="titulo">Rutinas</h1>
         {activo ? (
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             <span className="font-bold text-orange-600">{activo.nombre}</span> · semana {semana} de {activo.semanas.length}
@@ -98,7 +98,7 @@ export default function Rutinas() {
         </div>
         <section className="tarjeta flex flex-col gap-4">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-2xl font-black uppercase">{rutina.nombre}</h2>
+            <h2 className="subtitulo">{rutina.nombre}</h2>
             <span className="font-mono text-sm text-orange-600">{n} de {total} hechos</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">

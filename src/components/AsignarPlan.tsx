@@ -46,6 +46,7 @@ export default function AsignarPlan({ alumno, hoy, asignar }: Props) {
   const [rutinas, setRutinas] = useState<RutinaEd[]>(inicial);
   const [marcadas, setMarcadas] = useState<string[]>(seleccionInicial);
   const [editando, setEditando] = useState(false);
+  const [porSemana, setPorSemana] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -67,6 +68,12 @@ export default function AsignarPlan({ alumno, hoy, asignar }: Props) {
     setRutinas((rs) => rs.filter((r) => r.uid !== uid));
     setMarcadas((m) => m.filter((k) => !k.endsWith(`-${uid}`)));
   };
+  /** Marca o desmarca una rutina en todas las semanas a la vez. */
+  const alternarTodas = (uid: string, valor: boolean) =>
+    setMarcadas((m) => {
+      const sin = m.filter((k) => !k.endsWith(`-${uid}`));
+      return valor ? [...sin, ...Array.from({ length: MAX_SEMANAS }, (_, i) => `${i + 1}-${uid}`)] : sin;
+    });
   const alternar = (clave: string) =>
     setMarcadas((m) => (m.includes(clave) ? m.filter((k) => k !== clave) : [...m, clave]));
 
@@ -103,7 +110,7 @@ export default function AsignarPlan({ alumno, hoy, asignar }: Props) {
 
   return (
     <form onSubmit={enviar} className="flex flex-col gap-4">
-      <h3 className="text-xl font-black uppercase">Asignar plan de rutinas</h3>
+      <h2 className="subtitulo">Nuevo plan de rutinas</h2>
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label className="etiqueta" htmlFor="plan-nombre">Nombre</label>
@@ -176,22 +183,40 @@ export default function AsignarPlan({ alumno, hoy, asignar }: Props) {
         )}
       </div>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="etiqueta">Qué rutinas toca cada semana</legend>
-        {Array.from({ length: semanas }, (_, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200 pt-2 text-sm dark:border-zinc-800">
-            <span className="w-20 font-mono text-xs uppercase text-zinc-500">Semana {i + 1}</span>
+      <fieldset className="flex flex-col gap-3">
+        <legend className="etiqueta">Rutinas del plan</legend>
+        {!porSemana ? (
+          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
             {rutinas.map((r) => {
-              const clave = `${i + 1}-${r.uid}`;
+              const todas = Array.from({ length: semanas }, (_, i) => i + 1).every((s) => marcadas.includes(`${s}-${r.uid}`));
               return (
-                <label key={clave} className="flex items-center gap-2">
-                  <input type="checkbox" className="accent-orange-600" checked={marcadas.includes(clave)} onChange={() => alternar(clave)} />
+                <label key={r.uid} className="flex items-center gap-2">
+                  <input type="checkbox" className="size-5 accent-orange-600" checked={todas} onChange={() => alternarTodas(r.uid, !todas)} />
                   {r.nombre.split(" · ")[0] || "Sin nombre"}
                 </label>
               );
             })}
           </div>
-        ))}
+        ) : (
+          Array.from({ length: semanas }, (_, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200 pt-2 text-sm dark:border-zinc-800">
+              <span className="w-20 font-mono text-xs uppercase text-zinc-500">Semana {i + 1}</span>
+              {rutinas.map((r) => {
+                const clave = `${i + 1}-${r.uid}`;
+                return (
+                  <label key={clave} className="flex items-center gap-2">
+                    <input type="checkbox" className="accent-orange-600" checked={marcadas.includes(clave)} onChange={() => alternar(clave)} />
+                    {r.nombre.split(" · ")[0] || "Sin nombre"}
+                  </label>
+                );
+              })}
+            </div>
+          ))
+        )}
+        <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <input type="checkbox" className="accent-orange-600" checked={porSemana} onChange={(e) => setPorSemana(e.target.checked)} />
+          Cambiar las rutinas semana por semana
+        </label>
       </fieldset>
 
       {msg && (

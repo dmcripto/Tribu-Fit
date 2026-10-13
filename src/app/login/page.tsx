@@ -32,7 +32,7 @@ export default function Login() {
       <Link href="/" aria-label="Tribu Fit, inicio">
         <Image src="/logo.png" alt="Tribu Fit" width={64} height={64} />
       </Link>
-      <h1 className="text-5xl font-black uppercase leading-none">Iniciar sesión</h1>
+      <h1 className="titulo">Iniciar sesión</h1>
       <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
         <div>
           <label className="etiqueta" htmlFor="email">Correo</label>
