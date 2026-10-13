@@ -13,9 +13,11 @@ const enlacesAtleta = [
   { href: "/rutinas", texto: "Rutinas" },
   { href: "/nutricion", texto: "Nutrición" },
   { href: "/medidas", texto: "Medidas" },
+  { href: "/pagos", texto: "Pagos" },
 ];
 const enlacesEntrenador = [
   { href: "/entrenador", texto: "Mis alumnos" },
+  { href: "/pagos", texto: "Pagos" },
   { href: "/panel", texto: "Panel" },
 ];
 
@@ -35,7 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Link href="/" aria-label="Tribu Fit, inicio">
           <Image src="/logo.png" alt="Tribu Fit" width={48} height={48} />
         </Link>
-        <nav className="flex gap-1" aria-label="Principal">
+        <nav className="flex flex-wrap gap-1" aria-label="Principal">
           {enlaces.map((e) => (
             <Link
               key={e.href}

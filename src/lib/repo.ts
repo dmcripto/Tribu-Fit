@@ -3,13 +3,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AGUA_KEY, COMIDAS_KEY, ENTRENOS_KEY, MEDIDAS_KEY, NUTRI_KEY, PLANES_KEY,
-  VACIO_AGUA, VACIO_COMIDAS, VACIO_ENTRENOS, VACIO_MEDIDAS, VACIO_NUTRI, VACIO_PLANES,
-  sumarDias, type Plan, type SemanaPlan,
+  AGUA_KEY, COMIDAS_KEY, ENTRENOS_KEY, MEDIDAS_KEY, NUTRI_KEY, PAGOS_KEY, PAGO_CONFIG_KEY, PLANES_KEY,
+  GRACIA_POR_DEFECTO, PREMIUM_EXC_KEY, VACIO_AGUA, VACIO_COMIDAS, VACIO_ENTRENOS, VACIO_EXC, VACIO_MEDIDAS,
+  VACIO_NUTRI, VACIO_PAGOS, VACIO_PLANES, estadoPremium, sumarDias, type EstadoPremium, type Plan, type SemanaPlan,
 } from "./datos";
 import { modoDemo, supabase } from "./supabase";
 import { useLocal, useToday } from "./store";
-import type { Alumno, Comida, Entreno, Medida, ObjetivoNutricion, Usuario } from "./types";
+import type { Alumno, Comida, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PagoConfig, PremiumModo, Usuario } from "./types";
 
 const db = () => supabase as SupabaseClient;
 
@@ -24,6 +24,19 @@ function useRemoto<T>(cargar: () => Promise<T>, inicial: T) {
   }, [cargar, n]);
   const recargar = useCallback(() => setN((x) => x + 1), []);
   return [data, recargar] as const;
+}
+
+/** Supabase devuelve como máximo 1.000 filas por consulta: se piden por páginas. */
+async function traerTodo<T>(
+  pagina: (desde: number, hasta: number) => PromiseLike<{ data: unknown[] | null }>,
+): Promise<T[]> {
+  const todo: T[] = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data } = await pagina(desde, desde + 999);
+    const filas = (data ?? []) as T[];
+    todo.push(...filas);
+    if (filas.length < 1000) return todo;
+  }
 }
 
 /* ---------- Medidas ---------- */
@@ -268,6 +281,10 @@ export type Cartera = {
   objetivos: Record<string, ObjetivoNutricion>;
   asignar: (p: NuevoPlan) => Promise<string | null>;
   asignarNutricion: (alumnoId: string, o: ObjetivoNutricion) => Promise<string | null>;
+  /** Excepciones de premium por alumno (bloqueado o cortesía). */
+  excepciones: Record<string, PremiumModo>;
+  /** null deja al alumno en automático (según sus pagos). */
+  fijarExcepcion: (alumnoId: string, modo: PremiumModo | null) => Promise<string | null>;
 };
 
 const SIN_ALUMNOS: Alumno[] = [];
@@ -316,6 +333,7 @@ function useCarteraLocal(yo: Usuario | null): Cartera {
   const [planes, setPlanes] = useLocal(PLANES_KEY, VACIO_PLANES);
   const [comidas] = useLocal(COMIDAS_KEY, VACIO_COMIDAS);
   const [objetivos, setObjetivos] = useLocal(NUTRI_KEY, VACIO_NUTRI);
+  const [excepciones, setExcepciones] = useLocal(PREMIUM_EXC_KEY, VACIO_EXC);
 
   const alumnos = useMemo<Alumno[]>(() => {
     if (!yo) return SIN_ALUMNOS;
@@ -336,48 +354,83 @@ function useCarteraLocal(yo: Usuario | null): Cartera {
     return null as string | null;
   }, [setObjetivos]);
 
-  return { alumnos, planes, objetivos, asignar, asignarNutricion };
+  const fijarExcepcion = useCallback(async (alumnoId: string, modo: PremiumModo | null) => {
+    setExcepciones((prev) => {
+      const sig = { ...prev };
+      if (modo) sig[alumnoId] = modo; else delete sig[alumnoId];
+      return sig;
+    });
+    return null as string | null;
+  }, [setExcepciones]);
+
+  return { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion };
 }
 
 function useCarteraRemota(yo: Usuario | null): Cartera {
   const coach = yo?.id ?? "";
   const cargar = useCallback(async (): Promise<{
     alumnos: Alumno[]; planes: Plan[]; objetivos: Record<string, ObjetivoNutricion>;
+    excepciones: Record<string, PremiumModo>;
   }> => {
-    if (!coach) return { alumnos: [], planes: [], objetivos: {} };
-    const { data: us } = await db().from("usuarios")
-      .select("id,nombre,objetivo").eq("entrenador_id", coach);
-    const ids = (us ?? []).map((u) => u.id as string);
-    if (ids.length === 0) return { alumnos: [], planes: [], objetivos: {} };
-    const desde = new Date(Date.now() - 14 * 86_400_000).toISOString().slice(0, 10);
-    const [cons, med, ent, pla, com, obj] = await Promise.all([
-      db().from("consentimientos").select("usuario_id,comparte_con_entrenador").in("usuario_id", ids),
-      db().from("medidas").select("usuario_id,fecha,peso_kg,grasa_pct,cintura_cm").in("usuario_id", ids).order("fecha"),
-      db().from("entrenos").select("usuario_id,fecha,rutina,hechos,total").in("usuario_id", ids).order("fecha"),
-      db().from("planes").select("id,alumno_id,nombre,fecha_inicio,plan_semanas(semana,rutinas)").eq("entrenador_id", coach),
-      db().from("comidas").select("id,usuario_id,fecha,nombre,kcal,proteina_g,carbos_g,grasas_g").in("usuario_id", ids).gte("fecha", desde).order("id"),
-      db().from("nutricion_objetivos").select("alumno_id,kcal,proteina_g,carbos_g,grasas_g,agua_vasos,notas").eq("entrenador_id", coach),
+    if (!coach) return { alumnos: [], planes: [], objetivos: {}, excepciones: {} };
+    // Sin filtrar por lista de alumnos: las reglas de privacidad (RLS) ya limitan cada
+    // consulta a los alumnos de esta entrenadora. Se pagina de 1.000 en 1.000 y se
+    // acota la historia para que funcione con cualquier número de alumnos.
+    const hace = (dias: number) => new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10);
+    const [us, cons, med, ent, pla, com, obj, exc] = await Promise.all([
+      traerTodo<{ id: string; nombre: string; objetivo: string | null }>((a, b) =>
+        db().from("usuarios").select("id,nombre,objetivo").eq("entrenador_id", coach).order("nombre").order("id").range(a, b)),
+      traerTodo<{ usuario_id: string; comparte_con_entrenador: boolean }>((a, b) =>
+        db().from("consentimientos").select("usuario_id,comparte_con_entrenador").order("usuario_id").range(a, b)),
+      traerTodo<{ usuario_id: string; fecha: string; peso_kg: number | string; grasa_pct: number | string | null; cintura_cm: number | string | null }>((a, b) =>
+        db().from("medidas").select("usuario_id,fecha,peso_kg,grasa_pct,cintura_cm").gte("fecha", hace(180)).order("id").range(a, b)),
+      traerTodo<Entreno & { usuario_id: string }>((a, b) =>
+        db().from("entrenos").select("usuario_id,fecha,rutina,hechos,total").gte("fecha", hace(90)).order("id").range(a, b)),
+      traerTodo<FilaPlan>((a, b) =>
+        db().from("planes").select("id,alumno_id,nombre,fecha_inicio,plan_semanas(semana,rutinas)").eq("entrenador_id", coach).order("id").range(a, b)),
+      traerTodo<FilaComida & { usuario_id: string }>((a, b) =>
+        db().from("comidas").select("id,usuario_id,fecha,nombre,kcal,proteina_g,carbos_g,grasas_g").gte("fecha", hace(14)).order("id").range(a, b)),
+      traerTodo<FilaObjetivo & { alumno_id: string }>((a, b) =>
+        db().from("nutricion_objetivos").select("alumno_id,kcal,proteina_g,carbos_g,grasas_g,agua_vasos,notas").eq("entrenador_id", coach).order("alumno_id").range(a, b)),
+      traerTodo<{ alumno_id: string; modo: PremiumModo }>((a, b) =>
+        db().from("premium_excepciones").select("alumno_id,modo").eq("entrenador_id", coach).order("alumno_id").range(a, b)),
     ]);
-    const alumnos: Alumno[] = (us ?? []).map((u) => ({
+
+    const agrupar = <T,>(filas: T[], clave: (f: T) => string) => {
+      const m = new Map<string, T[]>();
+      for (const f of filas) {
+        const k = clave(f);
+        const lista = m.get(k);
+        if (lista) lista.push(f); else m.set(k, [f]);
+      }
+      return m;
+    };
+    const conPermiso = new Set(cons.filter((c) => c.comparte_con_entrenador).map((c) => c.usuario_id));
+    const medPor = agrupar(med, (m) => m.usuario_id);
+    const entPor = agrupar(ent, (e) => e.usuario_id);
+    const comPor = agrupar(com, (c) => c.usuario_id);
+
+    const alumnos: Alumno[] = us.map((u) => ({
       id: u.id,
       nombre: u.nombre,
       objetivo: u.objetivo ?? "",
-      permiso: (cons.data ?? []).some((c) => c.usuario_id === u.id && c.comparte_con_entrenador),
-      medidas: (med.data ?? []).filter((m) => m.usuario_id === u.id).map((m) => ({
+      permiso: conPermiso.has(u.id),
+      medidas: (medPor.get(u.id) ?? []).map((m) => ({
         fecha: m.fecha,
         peso_kg: Number(m.peso_kg),
         grasa_pct: m.grasa_pct == null ? undefined : Number(m.grasa_pct),
         cintura_cm: m.cintura_cm == null ? undefined : Number(m.cintura_cm),
       })),
-      entrenos: (ent.data ?? []).filter((e) => e.usuario_id === u.id) as Entreno[],
-      comidas: ((com.data ?? []) as (FilaComida & { usuario_id: string })[])
-        .filter((c) => c.usuario_id === u.id).map(aComida),
+      entrenos: (entPor.get(u.id) ?? []).map((e) => ({ fecha: e.fecha, rutina: e.rutina, hechos: e.hechos, total: e.total })),
+      comidas: (comPor.get(u.id) ?? []).map(aComida),
     }));
     const objetivos: Record<string, ObjetivoNutricion> = {};
-    for (const o of (obj.data ?? []) as (FilaObjetivo & { alumno_id: string })[]) objetivos[o.alumno_id] = aObjetivo(o);
-    return { alumnos, planes: ((pla.data ?? []) as unknown as FilaPlan[]).map(aPlan), objetivos };
+    for (const o of obj) objetivos[o.alumno_id] = aObjetivo(o);
+    const excepciones: Record<string, PremiumModo> = {};
+    for (const x of exc) excepciones[x.alumno_id] = x.modo;
+    return { alumnos, planes: pla.map(aPlan), objetivos, excepciones };
   }, [coach]);
-  const [datos, recargar] = useRemoto(cargar, { alumnos: SIN_ALUMNOS, planes: VACIO_PLANES, objetivos: VACIO_NUTRI });
+  const [datos, recargar] = useRemoto(cargar, { alumnos: SIN_ALUMNOS, planes: VACIO_PLANES, objetivos: VACIO_NUTRI, excepciones: VACIO_EXC });
 
   const asignar = useCallback(async (p: NuevoPlan) => {
     const { data: plan, error } = await db().from("planes")
@@ -402,8 +455,216 @@ function useCarteraRemota(yo: Usuario | null): Cartera {
     return error ? error.message : null;
   }, [coach, recargar]);
 
-  return { alumnos: datos.alumnos, planes: datos.planes, objetivos: datos.objetivos, asignar, asignarNutricion };
+  const fijarExcepcion = useCallback(async (alumnoId: string, modo: PremiumModo | null) => {
+    const { error } = modo
+      ? await db().from("premium_excepciones").upsert(
+          { alumno_id: alumnoId, entrenador_id: coach, modo, actualizado: new Date().toISOString() },
+          { onConflict: "alumno_id" },
+        )
+      : await db().from("premium_excepciones").delete().eq("alumno_id", alumnoId);
+    if (!error) recargar();
+    return error ? error.message : null;
+  }, [coach, recargar]);
+
+  return {
+    alumnos: datos.alumnos, planes: datos.planes, objetivos: datos.objetivos, asignar, asignarNutricion,
+    excepciones: datos.excepciones, fijarExcepcion,
+  };
 }
 
 export const useCartera: (yo: Usuario | null) => Cartera =
   modoDemo ? useCarteraLocal : useCarteraRemota;
+
+/* ---------- Pagos ---------- */
+
+const SIN_CONFIG: PagoConfig | null = null;
+
+type ApiConfig = {
+  config: PagoConfig | null;
+  guardar: (c: PagoConfig) => Promise<string | null>;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function usePagoConfigLocal(_yo: Usuario | null): ApiConfig {
+  const [config, set] = useLocal<PagoConfig | null>(PAGO_CONFIG_KEY, SIN_CONFIG);
+  const guardar = useCallback(async (c: PagoConfig) => { set(c); return null as string | null; }, [set]);
+  return { config, guardar };
+}
+
+/** Cobro de la entrenadora (ella lo edita; sus alumnos lo ven gracias a las reglas de privacidad). */
+function usePagoConfigRemoto(yo: Usuario | null): ApiConfig {
+  const uid = yo?.id ?? "";
+  const cargar = useCallback(async (): Promise<PagoConfig | null> => {
+    if (!uid) return null;
+    const { data } = await db().from("pago_config")
+      .select("moneda,precio,instrucciones,enlace_tarjeta,qr_imagen,dias_gracia").maybeSingle();
+    return data
+      ? {
+          moneda: data.moneda, precio: Number(data.precio), instrucciones: data.instrucciones ?? "",
+          enlace: data.enlace_tarjeta ?? "", qr: data.qr_imagen ?? "",
+          gracia: Number(data.dias_gracia ?? GRACIA_POR_DEFECTO),
+        }
+      : null;
+  }, [uid]);
+  const [config, recargar] = useRemoto<PagoConfig | null>(cargar, SIN_CONFIG);
+  const guardar = useCallback(async (c: PagoConfig) => {
+    const { error } = await db().from("pago_config").upsert({
+      entrenador_id: uid, moneda: c.moneda, precio: c.precio, instrucciones: c.instrucciones,
+      enlace_tarjeta: c.enlace || null, qr_imagen: c.qr || null, dias_gracia: c.gracia,
+      actualizado: new Date().toISOString(),
+    }, { onConflict: "entrenador_id" });
+    if (!error) recargar();
+    return error ? error.message : null;
+  }, [uid, recargar]);
+  return { config, guardar };
+}
+
+export const usePagoConfig: (yo: Usuario | null) => ApiConfig =
+  modoDemo ? usePagoConfigLocal : usePagoConfigRemoto;
+
+export type NuevoPago = {
+  alumno_id: string;
+  monto: number;
+  moneda: string;
+  metodo: Metodo;
+  referencia: string;
+  comprobante?: string;
+  /** Solo la entrenadora: registrar un cobro ya confirmado (efectivo, transferencia). */
+  confirmado?: { vence: string };
+};
+
+type ApiPagos = {
+  pagos: Pago[];
+  registrar: (p: NuevoPago) => Promise<string | null>;
+  resolver: (id: string, estado: "confirmado" | "rechazado", vence?: string) => Promise<string | null>;
+};
+
+function pagosDeMuestra(hoy: string): Pago[] {
+  if (!hoy) return [];
+  return [
+    { id: "ejemplo-p1", alumno_id: "ejemplo-lucia", monto: 30, moneda: "USD", metodo: "qr", referencia: "OP-884102", estado: "pendiente", creado: sumarDias(hoy, -1) },
+    { id: "ejemplo-p2", alumno_id: "ejemplo-ivan", monto: 30, moneda: "USD", metodo: "tarjeta", referencia: "", estado: "confirmado", vence: sumarDias(hoy, 12), creado: sumarDias(hoy, -18) },
+    { id: "ejemplo-p3", alumno_id: "ejemplo-andres", monto: 30, moneda: "USD", metodo: "transferencia", referencia: "TR-5521", estado: "confirmado", vence: sumarDias(hoy, -4), creado: sumarDias(hoy, -34) },
+  ];
+}
+
+function usePagosLocal(yo: Usuario | null): ApiPagos {
+  const hoy = useToday();
+  const [guardados, set] = useLocal(PAGOS_KEY, VACIO_PAGOS);
+  const pagos = useMemo(() => {
+    const ids = new Set(guardados.map((p) => p.id));
+    const muestra = yo?.rol === "entrenador" ? pagosDeMuestra(hoy).filter((m) => !ids.has(m.id)) : [];
+    return [...guardados, ...muestra].sort((a, b) => b.creado.localeCompare(a.creado));
+  }, [guardados, hoy, yo?.rol]);
+
+  const registrar = useCallback(async (p: NuevoPago) => {
+    const nuevo: Pago = {
+      id: crypto.randomUUID(), alumno_id: p.alumno_id, monto: p.monto, moneda: p.moneda, metodo: p.metodo,
+      referencia: p.referencia, comprobante: p.comprobante,
+      estado: p.confirmado ? "confirmado" : "pendiente", vence: p.confirmado?.vence,
+      creado: new Date().toISOString(),
+    };
+    set((prev) => [...prev, nuevo]);
+    return null as string | null;
+  }, [set]);
+
+  const resolver = useCallback(async (id: string, estado: "confirmado" | "rechazado", vence?: string) => {
+    const actual = pagos.find((p) => p.id === id);
+    if (!actual) return "No se encontró el pago.";
+    const nuevo: Pago = { ...actual, estado, vence: estado === "confirmado" ? vence : undefined };
+    set((prev) => (prev.some((p) => p.id === id) ? prev.map((p) => (p.id === id ? nuevo : p)) : [...prev, nuevo]));
+    return null as string | null;
+  }, [pagos, set]);
+
+  return { pagos, registrar, resolver };
+}
+
+type FilaPago = {
+  id: number | string; alumno_id: string; monto: number | string; moneda: string; metodo: Metodo;
+  referencia: string | null; comprobante: string | null; estado: Pago["estado"]; vence: string | null; creado: string;
+};
+
+function aPago(p: FilaPago): Pago {
+  return {
+    id: String(p.id), alumno_id: p.alumno_id, monto: Number(p.monto), moneda: p.moneda, metodo: p.metodo,
+    referencia: p.referencia ?? "", comprobante: p.comprobante ?? undefined, estado: p.estado,
+    vence: p.vence ?? undefined, creado: p.creado,
+  };
+}
+
+function usePagosRemoto(yo: Usuario | null): ApiPagos {
+  const uid = yo?.id ?? "";
+  const cargar = useCallback(async (): Promise<Pago[]> => {
+    if (!uid) return [];
+    // Las reglas de privacidad ya limitan: el alumno ve los suyos y la entrenadora los de sus alumnos.
+    const filas = await traerTodo<FilaPago>((a, b) =>
+      db().from("pagos")
+        .select("id,alumno_id,monto,moneda,metodo,referencia,comprobante,estado,vence,creado")
+        .order("creado", { ascending: false }).order("id").range(a, b));
+    return filas.map(aPago);
+  }, [uid]);
+  const [pagos, recargar] = useRemoto(cargar, VACIO_PAGOS);
+
+  const registrar = useCallback(async (p: NuevoPago) => {
+    const esCoach = yo?.rol === "entrenador";
+    const entrenador = esCoach ? uid : yo?.entrenadorId;
+    if (!entrenador) return "Primero vincúlate con tu entrenador/a desde tu Panel.";
+    const { error } = await db().from("pagos").insert({
+      alumno_id: p.alumno_id, entrenador_id: entrenador, monto: p.monto, moneda: p.moneda, metodo: p.metodo,
+      referencia: p.referencia, comprobante: p.comprobante ?? null,
+      estado: p.confirmado ? "confirmado" : "pendiente", vence: p.confirmado?.vence ?? null,
+    });
+    if (!error) recargar();
+    return error ? error.message : null;
+  }, [uid, yo?.rol, yo?.entrenadorId, recargar]);
+
+  const resolver = useCallback(async (id: string, estado: "confirmado" | "rechazado", vence?: string) => {
+    const { error } = await db().from("pagos")
+      .update({ estado, vence: estado === "confirmado" ? vence ?? null : null }).eq("id", id);
+    if (!error) recargar();
+    return error ? error.message : null;
+  }, [recargar]);
+
+  return { pagos, registrar, resolver };
+}
+
+export const usePagos: (yo: Usuario | null) => ApiPagos = modoDemo ? usePagosLocal : usePagosRemoto;
+
+/* ---------- Premium del alumno ---------- */
+
+const SIN_EXC: PremiumModo | null = null;
+
+function useExcepcionLocal(yo: Usuario | null) {
+  const [mapa] = useLocal(PREMIUM_EXC_KEY, VACIO_EXC);
+  return (yo ? mapa[yo.id] : undefined) ?? SIN_EXC;
+}
+
+function useExcepcionRemota(yo: Usuario | null) {
+  const uid = yo?.id ?? "";
+  const cargar = useCallback(async (): Promise<PremiumModo | null> => {
+    if (!uid) return null;
+    const { data } = await db().from("premium_excepciones").select("modo").eq("alumno_id", uid).maybeSingle();
+    return (data?.modo as PremiumModo | undefined) ?? null;
+  }, [uid]);
+  return useRemoto<PremiumModo | null>(cargar, SIN_EXC)[0];
+}
+
+const useExcepcion: (yo: Usuario | null) => PremiumModo | null = modoDemo ? useExcepcionLocal : useExcepcionRemota;
+
+/** ¿Tiene este alumno el seguimiento personalizado activo? Misma regla que la base de datos. */
+export function usePremium(yo: Usuario | null): EstadoPremium {
+  const hoy = useToday();
+  const { config } = usePagoConfig(yo);
+  const { pagos } = usePagos(yo);
+  const excepcion = useExcepcion(yo);
+  return useMemo(
+    () => estadoPremium({
+      pagos: pagos.filter((p) => p.alumno_id === yo?.id),
+      cobra: yo?.rol === "atleta" && config !== null,
+      gracia: config?.gracia ?? GRACIA_POR_DEFECTO,
+      excepcion,
+      hoy,
+    }),
+    [pagos, config, excepcion, hoy, yo?.id, yo?.rol],
+  );
+}

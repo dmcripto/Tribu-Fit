@@ -6,10 +6,11 @@ import AsignarNutricion from "@/components/AsignarNutricion";
 import AsignarPlan from "@/components/AsignarPlan";
 import GraficoPeso from "@/components/GraficoPeso";
 import {
-  estadoAlumno, formatoFecha, semanaActual, entrenosSemana, planTerminado, promedioNutricion,
+  estadoAlumno, estadoPremium, formatoFecha, semanaActual, entrenosSemana, planTerminado, promedioNutricion,
+  PREMIUM_TEXTO,
   type Estado, type Plan,
 } from "@/lib/datos";
-import { useCartera } from "@/lib/repo";
+import { useCartera, usePagoConfig, usePagos } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
 import { useToday } from "@/lib/store";
 
@@ -24,7 +25,9 @@ const coma = (n: number) => n.toFixed(1).replace(".", ",");
 export default function Entrenador() {
   const usuario = useUsuario();
   const hoy = useToday();
-  const { alumnos, planes, objetivos, asignar, asignarNutricion } = useCartera(usuario);
+  const { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones } = useCartera(usuario);
+  const { config } = usePagoConfig(usuario);
+  const { pagos } = usePagos(usuario);
   const [sel, setSel] = useState<string | null>(null);
 
   if (usuario?.rol !== "entrenador") {
@@ -38,7 +41,12 @@ export default function Entrenador() {
     );
   }
 
-  const filas = alumnos.map((a) => ({ a, ...estadoAlumno(a.entrenos, hoy) }));
+  const premiumDe = (id: string) =>
+    estadoPremium({
+      pagos: pagos.filter((p) => p.alumno_id === id), cobra: config !== null, gracia: config?.gracia ?? 3,
+      excepcion: excepciones[id], hoy,
+    });
+  const filas = alumnos.map((a) => ({ a, ...estadoAlumno(a.entrenos, hoy), premium: premiumDe(a.id) }));
   const orden: Record<Estado, number> = { riesgo: 0, revisar: 1, al_dia: 2 };
   filas.sort((x, y) => orden[x.estado] - orden[y.estado]);
   const actual = alumnos.find((a) => a.id === sel) ?? filas[0]?.a;
@@ -82,11 +90,11 @@ export default function Entrenador() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left font-mono text-xs uppercase text-zinc-500">
-                  <th className="p-2">Alumno</th><th className="p-2">Último entreno</th><th className="p-2">7 días</th><th className="p-2">Peso</th><th className="p-2">Estado</th>
+                  <th className="p-2">Alumno</th><th className="p-2">Último entreno</th><th className="p-2">7 días</th><th className="p-2">Peso</th><th className="p-2">Estado</th><th className="p-2">Premium</th>
                 </tr>
               </thead>
               <tbody>
-                {filas.map(({ a, estado, desde }) => {
+                {filas.map(({ a, estado, desde, premium }) => {
                   const ult = [...a.medidas].sort((x, y) => x.fecha.localeCompare(y.fecha)).at(-1);
                   return (
                     <tr key={a.id} className={`border-t border-zinc-200 dark:border-zinc-800 ${a.id === actual?.id ? "bg-orange-600/10" : ""}`}>
@@ -105,6 +113,9 @@ export default function Entrenador() {
                           <span className="font-mono text-xs text-zinc-500">Sin permiso</span>
                         )}
                       </td>
+                      <td className={`p-2 font-mono text-xs font-bold ${premium.activo ? (premium.motivo === "en_gracia" ? "text-amber-700 dark:text-amber-400" : "text-green-700 dark:text-green-400") : "text-red-600"}`}>
+                        {config === null && premium.motivo === "libre" ? "—" : PREMIUM_TEXTO[premium.motivo]}
+                      </td>
                     </tr>
                   );
                 })}
@@ -118,6 +129,11 @@ export default function Entrenador() {
                 <h2 className="text-3xl font-black uppercase leading-none">{actual.nombre}</h2>
                 <p className="text-sm text-zinc-500">{actual.objetivo || "Sin objetivo indicado"}</p>
               </div>
+              {!premiumDe(actual.id).activo && config !== null && (
+                <p className="rounded-md border border-red-600 px-3 py-2 text-sm text-red-600">
+                  Su seguimiento personalizado está bloqueado ({premiumDe(actual.id).motivo === "bloqueado" ? "lo bloqueaste a mano" : premiumDe(actual.id).motivo === "vencido" ? "cuota vencida" : "sin pagos confirmados"}). No verá el plan ni la nutrición que le asignes hasta que pague o le des cortesía en Pagos.
+                </p>
+              )}
               {!actual.permiso ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   Este alumno no ha dado permiso para compartir su progreso contigo. Puede activarlo al registrarse o desde su cuenta.

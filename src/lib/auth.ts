@@ -5,6 +5,7 @@ import { supabase } from "./supabase";
 import type { Rol, Usuario } from "./types";
 
 export const USER_KEY = "tf_user";
+export const AVISO_KEY = "tf_aviso";
 const CUENTA_DEMO_KEY = "tf_demo_cuenta";
 
 export type Registro = {
@@ -22,6 +23,24 @@ export type Registro = {
 
 export type Resultado = { error?: string; aviso?: string };
 
+/** Mensajes de Supabase en español y con la acción a seguir. */
+export function traducir(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("invalid login credentials"))
+    return "Correo o contraseña incorrectos. Si aún no tienes cuenta, créala en Registro.";
+  if (m.includes("user already registered") || m.includes("already been registered"))
+    return "Ese correo ya tiene cuenta. Inicia sesión.";
+  if (m.includes("email not confirmed"))
+    return "Falta confirmar tu correo. Abre el mensaje que te enviamos y pulsa el enlace.";
+  if (m.includes("rate limit") || m.includes("security purposes"))
+    return "Se han hecho demasiados intentos o registros seguidos. Espera unos minutos y vuelve a probar.";
+  if (m.includes("password should be"))
+    return "La contraseña necesita 8 caracteres o más.";
+  if (m.includes("invalid email") || m.includes("unable to validate email"))
+    return "Ese correo no es válido.";
+  return msg;
+}
+
 function guardar(u: Usuario) {
   localStorage.setItem(USER_KEY, JSON.stringify(u));
   window.dispatchEvent(new Event("storage"));
@@ -37,8 +56,9 @@ function codigoAleatorio() {
 async function asegurarPerfil(
   db: SupabaseClient,
   user: User,
-): Promise<{ usuario?: Usuario; error?: string }> {
+): Promise<{ usuario?: Usuario; error?: string; avisoCodigo?: string }> {
   const cols = "id,nombre,rol,objetivo,nivel,codigo_invitacion,entrenador_id";
+  let avisoCodigo: string | undefined;
   let { data: fila } = await db.from("usuarios").select(cols).eq("id", user.id).maybeSingle();
 
   if (!fila) {
@@ -61,7 +81,12 @@ async function asegurarPerfil(
     });
     if (e2.error) return { error: e2.error.message };
     if (m.codigo_entrenador) {
-      await db.rpc("vincular_entrenador", { p_codigo: m.codigo_entrenador });
+      const r = await db.rpc("vincular_entrenador", { p_codigo: m.codigo_entrenador });
+      if (r.error) {
+        avisoCodigo = `Tu cuenta está creada, pero no se pudo usar el código: ${traducir(r.error.message)} Vincúlate desde tu Panel.`;
+      } else if (!r.data) {
+        avisoCodigo = `Tu cuenta está creada, pero el código "${m.codigo_entrenador}" no existe. Revisa con tu entrenador/a que esté bien escrito y vincúlate desde este Panel.`;
+      }
     }
     ({ data: fila } = await db.from("usuarios").select(cols).eq("id", user.id).maybeSingle());
   }
@@ -77,6 +102,7 @@ async function asegurarPerfil(
       codigo: fila.codigo_invitacion ?? undefined,
       entrenadorId: fila.entrenador_id,
     },
+    avisoCodigo,
   };
 }
 
@@ -112,7 +138,7 @@ export async function registrar(r: Registro): Promise<Resultado> {
       },
     },
   });
-  if (error) return { error: error.message };
+  if (error) return { error: traducir(error.message) };
   if (!data.user) return { error: "No se pudo crear la cuenta. Inténtalo de nuevo." };
   if (!data.session) {
     return { aviso: "Te hemos enviado un correo. Confírmalo y luego inicia sesión." };
@@ -120,6 +146,7 @@ export async function registrar(r: Registro): Promise<Resultado> {
   const p = await asegurarPerfil(supabase, data.user);
   if (p.error || !p.usuario) return { error: p.error };
   guardar(p.usuario);
+  if (p.avisoCodigo) localStorage.setItem(AVISO_KEY, JSON.stringify(p.avisoCodigo));
   return {};
 }
 
@@ -134,10 +161,11 @@ export async function entrar(email: string, password: string): Promise<Resultado
     return {};
   }
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: error.message };
+  if (error) return { error: traducir(error.message) };
   const p = await asegurarPerfil(supabase, data.user);
   if (p.error || !p.usuario) return { error: p.error };
   guardar(p.usuario);
+  if (p.avisoCodigo) localStorage.setItem(AVISO_KEY, JSON.stringify(p.avisoCodigo));
   return {};
 }
 

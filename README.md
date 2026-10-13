@@ -33,7 +33,7 @@ Para usar Supabase:
 
 ## Pantallas
 
-`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas` y `/entrenador` (solo cuentas de entrenador/a).
+`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas`, `/pagos` y `/entrenador` (solo cuentas de entrenador/a).
 
 ## Entrenador/a y alumnos
 
@@ -45,6 +45,13 @@ Para usar Supabase:
 - Ve la media de calorías y proteína que registra cada alumno.
 - Asigna planes de 1, 2, 4 u 8 semanas. La semana N se libera N-1 semanas después del inicio, tanto en la interfaz como en la base de datos.
 
+## Pagos y sector premium
+
+- La entrenadora configura su cuota (precio, moneda, días de gracia), un enlace de pago con tarjeta del proveedor que prefiera (Mercado Pago, Stripe, PayPal...) y su código QR.
+- Tribu Fit **no recibe ni guarda datos de tarjeta**: el pago con tarjeta se hace en la página del proveedor. El alumno avisa su pago (con comprobante opcional) y la entrenadora lo confirma, o registra cobros en efectivo.
+- El seguimiento personalizado (plan de rutinas y objetivo de nutrición) es **premium**. Si la cuota vence y pasan los días de gracia, se bloquea solo, y vuelve al confirmar un pago nuevo. La entrenadora puede bloquear o dar cortesía a mano. El bloqueo se aplica en la base de datos (función `premium_activo`), no solo en la interfaz.
+- Una entrenadora que no configura un cobro no bloquea a nadie.
+
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` (por ejemplo `002_nutricion.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`).

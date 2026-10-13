@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import { entrenosSemana, racha } from "@/lib/datos";
-import { vincularEntrenador } from "@/lib/auth";
-import { useEntrenos, useMedidas } from "@/lib/repo";
+import { AVISO_KEY, vincularEntrenador } from "@/lib/auth";
+import PremiumAviso from "@/components/PremiumAviso";
+import { useEntrenos, useMedidas, usePremium } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
-import { useToday } from "@/lib/store";
+import { useLocal, useToday } from "@/lib/store";
 
 function Dato({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
@@ -48,11 +49,15 @@ function Vinculo() {
   );
 }
 
+const SIN_AVISO: string | null = null;
+
 export default function Panel() {
   const usuario = useUsuario();
+  const [avisoCodigo, setAvisoCodigo] = useLocal<string | null>(AVISO_KEY, SIN_AVISO);
   const hoy = useToday();
   const { medidas } = useMedidas(usuario?.id ?? "");
   const { entrenos } = useEntrenos(usuario?.id ?? "");
+  const premium = usePremium(usuario);
 
   const orden = [...medidas].sort((a, b) => a.fecha.localeCompare(b.fecha));
   const ultima = orden[orden.length - 1];
@@ -71,6 +76,13 @@ export default function Panel() {
           Hola, {usuario?.nombre}
         </h1>
       </div>
+      {avisoCodigo && (
+        <section role="alert" className="flex flex-col items-start gap-2 rounded-xl border-2 border-amber-500 p-4">
+          <p className="text-sm">{avisoCodigo}</p>
+          <button type="button" className="text-sm font-bold text-orange-600" onClick={() => setAvisoCodigo(null)}>Entendido</button>
+        </section>
+      )}
+      {usuario?.rol === "atleta" && <PremiumAviso estado={premium} mostrarActivo />}
       {usuario?.rol === "entrenador" && (
         <p className="text-sm">
           <Link href="/entrenador" className="font-bold text-orange-600">Ir a Mis alumnos</Link>

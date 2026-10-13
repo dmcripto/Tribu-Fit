@@ -5,7 +5,8 @@ import { useUsuario } from "@/components/AppShell";
 import {
   RUTINAS, formatoFecha, planTerminado, semanaActual, sumarDias, type Rutina,
 } from "@/lib/datos";
-import { useEntrenos, usePlanesAlumno } from "@/lib/repo";
+import PremiumAviso from "@/components/PremiumAviso";
+import { useEntrenos, usePlanesAlumno, usePremium } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 
 export default function Rutinas() {
@@ -14,9 +15,10 @@ export default function Rutinas() {
   const uid = usuario?.id ?? "";
   const { anadir } = useEntrenos(uid);
   const planes = usePlanesAlumno(uid);
+  const premium = usePremium(usuario);
 
   // Plan activo: el más reciente que ya empezó y no ha terminado.
-  const activo = [...planes]
+  const activo = !premium.activo ? undefined : [...planes]
     .sort((a, b) => b.fecha_inicio.localeCompare(a.fecha_inicio))
     .find((p) => semanaActual(p, hoy) > 0 && !planTerminado(p, hoy));
   const semana = activo ? semanaActual(activo, hoy) : 0;
@@ -54,6 +56,7 @@ export default function Rutinas() {
 
   return (
     <main className="flex flex-col gap-6">
+      <PremiumAviso estado={premium} />
       <div>
         <h1 className="text-5xl font-black uppercase leading-none">Rutinas</h1>
         {activo ? (
@@ -63,7 +66,9 @@ export default function Rutinas() {
           </p>
         ) : (
           <p className="mt-2 text-sm text-zinc-500">
-            {planes.length > 0
+            {!premium.activo
+              ? "Rutinas generales."
+              : planes.length > 0
               ? "Tu plan empieza pronto. Mientras tanto tienes estas rutinas generales."
               : "Rutinas generales. Cuando tu entrenador/a te asigne un plan, aparecerá aquí."}
           </p>

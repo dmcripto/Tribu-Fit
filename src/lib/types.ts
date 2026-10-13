@@ -57,3 +57,35 @@ export type Alumno = {
   comidas: Comida[];
   ejemplo?: boolean;
 };
+
+export type Metodo = "tarjeta" | "qr" | "transferencia" | "efectivo";
+export type EstadoPago = "pendiente" | "confirmado" | "rechazado";
+
+/** Cobro que configura la entrenadora. `enlace` es la página segura del proveedor de pagos. */
+export type PagoConfig = {
+  moneda: string;
+  precio: number;
+  instrucciones: string;
+  enlace: string;
+  /** Imagen del código QR como data URL. */
+  qr: string;
+  /** Días de gracia tras el vencimiento antes de bloquear el premium. */
+  gracia: number;
+};
+
+/** Excepción que fija la entrenadora para un alumno. */
+export type PremiumModo = "bloqueado" | "cortesia";
+
+export type Pago = {
+  id: string;
+  alumno_id: string;
+  monto: number;
+  moneda: string;
+  metodo: Metodo;
+  referencia: string;
+  comprobante?: string;
+  estado: EstadoPago;
+  /** Fecha hasta la que cubre la cuota (solo pagos confirmados). */
+  vence?: string;
+  creado: string;
+};

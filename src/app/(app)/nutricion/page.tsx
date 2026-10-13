@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import CampoTexto from "@/components/CampoTexto";
 import { estimarObjetivo, formatoFecha, sumarDias, totalesDia } from "@/lib/datos";
-import { useAgua, useComidas, useMedidas, useObjetivoNutricion } from "@/lib/repo";
+import PremiumAviso from "@/components/PremiumAviso";
+import { useAgua, useComidas, useMedidas, useObjetivoNutricion, usePremium } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 
 function Barra({ etiqueta, valor, meta, unidad }: { etiqueta: string; valor: number; meta: number; unidad: string }) {
@@ -32,7 +33,9 @@ export default function Nutricion() {
   const { comidas, anadir, borrar } = useComidas(uid);
   const { vasos, fijar } = useAgua(uid, hoy);
   const { medidas } = useMedidas(uid);
-  const asignado = useObjetivoNutricion(uid);
+  const premium = usePremium(usuario);
+  const objetivoCoach = useObjetivoNutricion(uid);
+  const asignado = premium.activo ? objetivoCoach : null;
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
 
@@ -63,6 +66,7 @@ export default function Nutricion() {
 
   return (
     <main className="flex flex-col gap-6">
+      <PremiumAviso estado={premium} />
       <div>
         <h1 className="text-5xl font-black uppercase leading-none">Nutrición</h1>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">

@@ -1,4 +1,4 @@
-import type { Comida, Entreno, Medida, ObjetivoNutricion } from "./types";
+import type { Comida, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PremiumModo } from "./types";
 
 export const MEDIDAS_KEY = "tf_medidas";
 export const ENTRENOS_KEY = "tf_entrenos";
@@ -155,3 +155,97 @@ export function promedioNutricion(comidas: Comida[], hoy: string, ventana = 7) {
     proteina: Math.round(total("proteina") / fechas.length),
   };
 }
+
+/* ---------- Pagos ---------- */
+
+export const PAGO_CONFIG_KEY = "tf_pago_config";
+export const PAGOS_KEY = "tf_pagos";
+export const VACIO_PAGOS: Pago[] = [];
+
+export const METODOS: Record<Metodo, string> = {
+  tarjeta: "Tarjeta de débito o crédito",
+  qr: "QR",
+  transferencia: "Transferencia",
+  efectivo: "Efectivo",
+};
+
+/** Un enlace de pago solo se acepta si es https (evita enlaces peligrosos). */
+export function enlaceSeguro(url: string) {
+  try {
+    return new URL(url).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** Una imagen subida solo se muestra si es una imagen en data URL. */
+export const esImagen = (s: string | undefined): s is string => !!s && s.startsWith("data:image/");
+
+export type EstadoCuota = "sin_pagos" | "al_dia" | "por_vencer" | "vencida";
+
+/** Estado de la cuota según el último pago confirmado. */
+export function estadoCuota(pagos: Pago[], hoy: string) {
+  const vence = pagos.filter((p) => p.estado === "confirmado" && p.vence).map((p) => p.vence as string).sort().at(-1) ?? null;
+  if (!hoy) return { estado: "al_dia" as EstadoCuota, vence };
+  if (!vence) return { estado: "sin_pagos" as EstadoCuota, vence };
+  const d = dias(vence, hoy);
+  return { estado: (d < 0 ? "vencida" : d <= 5 ? "por_vencer" : "al_dia") as EstadoCuota, vence };
+}
+
+/** Nuevo vencimiento al confirmar: 30 días desde hoy o desde el vencimiento actual, lo que sea mayor. */
+export function siguienteVencimiento(pagos: Pago[], hoy: string) {
+  const { vence } = estadoCuota(pagos, hoy);
+  const base = vence && vence > hoy ? vence : hoy;
+  return sumarDias(base, 30);
+}
+
+/* ---------- Premium ---------- */
+
+export const PREMIUM_EXC_KEY = "tf_premium_exc";
+export const VACIO_EXC: Record<string, PremiumModo> = {};
+export const GRACIA_POR_DEFECTO = 3;
+
+export type PremiumMotivo =
+  | "libre" | "cortesia" | "bloqueado" | "al_dia" | "en_gracia" | "vencido" | "sin_pagos";
+
+export type EstadoPremium = {
+  activo: boolean;
+  motivo: PremiumMotivo;
+  vence: string | null;
+  graciaHasta: string | null;
+};
+
+/**
+ * Mismas reglas que la función premium_activo de la base de datos:
+ * sin entrenadora que cobre, o con cortesía, está activo; bloqueado, no; y si no,
+ * hace falta un pago confirmado cuyo vencimiento más los días de gracia no haya pasado.
+ */
+export function estadoPremium(o: {
+  pagos: Pago[];
+  cobra: boolean;
+  gracia: number;
+  excepcion?: PremiumModo | null;
+  hoy: string;
+}): EstadoPremium {
+  const { vence } = estadoCuota(o.pagos, o.hoy);
+  const graciaHasta = vence ? sumarDias(vence, o.gracia) : null;
+  const r = (activo: boolean, motivo: PremiumMotivo): EstadoPremium => ({ activo, motivo, vence, graciaHasta });
+  if (o.excepcion === "bloqueado") return r(false, "bloqueado");
+  if (o.excepcion === "cortesia") return r(true, "cortesia");
+  if (!o.cobra || !o.hoy) return r(true, "libre");
+  if (!vence) return r(false, "sin_pagos");
+  const d = dias(vence, o.hoy);
+  if (d >= 0) return r(true, "al_dia");
+  if (-d <= o.gracia) return r(true, "en_gracia");
+  return r(false, "vencido");
+}
+
+export const PREMIUM_TEXTO: Record<PremiumMotivo, string> = {
+  libre: "Activo",
+  cortesia: "Activo (cortesía)",
+  bloqueado: "Bloqueado",
+  al_dia: "Activo",
+  en_gracia: "En gracia",
+  vencido: "Bloqueado: cuota vencida",
+  sin_pagos: "Bloqueado: sin pagos",
+};
