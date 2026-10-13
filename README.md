@@ -73,7 +73,7 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`).
 
 ## App móvil (PWA y APK)
 
