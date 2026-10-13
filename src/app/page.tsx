@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import RedirigirAuth from "@/components/RedirigirAuth";
 
 const tribus = [
   { nombre: "Hierro", texto: "Fuerza e hipertrofia con progresión semanal." },
@@ -10,6 +11,7 @@ const tribus = [
 export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-16 px-5 py-10">
+      <RedirigirAuth />
       <header className="flex items-center justify-between">
         <Image
           src="/logo.png"
@@ -50,6 +52,10 @@ export default function Home() {
           </article>
         ))}
       </section>
+      <footer className="flex flex-wrap gap-4 border-t border-zinc-200 pt-4 text-sm text-zinc-500 dark:border-zinc-800">
+        <Link href="/terminos" className="underline">Términos de uso</Link>
+        <Link href="/privacidad" className="underline">Política de privacidad</Link>
+      </footer>
     </main>
   );
 }

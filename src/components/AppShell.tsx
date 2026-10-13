@@ -65,16 +65,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
 
         {usuario && (
-          <button
-            type="button"
-            onClick={async () => {
-              await salir();
-              router.push("/");
-            }}
-            className="shrink-0 text-sm text-zinc-500 underline"
-          >
-            Salir<span className="hidden sm:inline"> ({usuario.nombre})</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-4 text-sm text-zinc-500">
+            <Link href="/cuenta" aria-current={ruta === "/cuenta" ? "page" : undefined} className={ruta === "/cuenta" ? "font-bold text-orange-600" : "underline"}>
+              Cuenta
+            </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                await salir();
+                router.push("/");
+              }}
+              className="underline"
+            >
+              Salir
+            </button>
+          </div>
         )}
       </header>
 

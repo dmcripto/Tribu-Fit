@@ -2,6 +2,7 @@
 
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { VERSION_LEGAL } from "./legal";
 import type { Rol, Usuario } from "./types";
 
 export const USER_KEY = "tf_user";
@@ -16,6 +17,7 @@ export type Registro = {
   nivel: string;
   rol: Rol;
   codigoEntrenador: string;
+  terminos: boolean;
   datosSalud: boolean;
   comparteTribu: boolean;
   comparteEntrenador: boolean;
@@ -73,12 +75,18 @@ async function asegurarPerfil(
       codigo_invitacion: rol === "entrenador" ? codigoAleatorio() : null,
     });
     if (e1.error) return { error: e1.error.message };
-    const e2 = await db.from("consentimientos").insert({
+    const permisos = {
       usuario_id: user.id,
       datos_salud: m.datos_salud === true,
       comparte_con_tribu: m.comparte_tribu === true,
       comparte_con_entrenador: m.comparte_entrenador === true,
-    });
+    };
+    const aceptacion = m.terminos_version
+      ? { terminos_version: String(m.terminos_version), terminos_fecha: new Date().toISOString() }
+      : {};
+    let e2 = await db.from("consentimientos").insert({ ...permisos, ...aceptacion });
+    // Si aún no se ejecutó la migración 005, la columna de términos no existe: se guarda sin ella.
+    if (e2.error && /terminos/i.test(e2.error.message)) e2 = await db.from("consentimientos").insert(permisos);
     if (e2.error) return { error: e2.error.message };
     if (m.codigo_entrenador) {
       const r = await db.rpc("vincular_entrenador", { p_codigo: m.codigo_entrenador });
@@ -126,12 +134,15 @@ export async function registrar(r: Registro): Promise<Resultado> {
     email: r.email,
     password: r.password,
     options: {
+      // El enlace del correo de confirmación vuelve a esta web, no a localhost.
+      emailRedirectTo: `${window.location.origin}/confirmado`,
       data: {
         nombre: r.nombre,
         objetivo: r.objetivo,
         nivel: r.nivel,
         rol: r.rol,
         codigo_entrenador: r.codigoEntrenador,
+        terminos_version: r.terminos ? VERSION_LEGAL : "",
         datos_salud: r.datosSalud,
         comparte_tribu: r.comparteTribu,
         comparte_entrenador: r.comparteEntrenador,
@@ -189,4 +200,41 @@ export async function salir() {
   if (supabase) await supabase.auth.signOut();
   localStorage.removeItem(USER_KEY);
   window.dispatchEvent(new Event("storage"));
+}
+
+/* ---------- Recuperar contraseña ---------- */
+
+/** Envía el enlace para elegir una contraseña nueva. Responde igual exista o no la cuenta. */
+export async function pedirRecuperacion(email: string): Promise<Resultado> {
+  if (!supabase) {
+    return { aviso: "En el modo demo no se envían correos. Crea una cuenta nueva para probar." };
+  }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/nueva-clave`,
+  });
+  if (error) return { error: traducir(error.message) };
+  return { aviso: "Si ese correo tiene cuenta, te hemos enviado un enlace para elegir una contraseña nueva. Revisa también la carpeta de spam." };
+}
+
+/** Cambia la contraseña de la sesión actual (desde el enlace del correo o desde Cuenta). */
+export async function cambiarClave(nueva: string): Promise<string | null> {
+  if (!supabase) return "El modo demo no tiene contraseñas reales.";
+  const { error } = await supabase.auth.updateUser({ password: nueva });
+  return error ? traducir(error.message) : null;
+}
+
+/**
+ * Termina de iniciar sesión cuando ya hay una sesión de Supabase, por ejemplo al pulsar el
+ * enlace de confirmación del correo: crea el perfil si hace falta y deja la cuenta lista.
+ */
+export async function completarDesdeSesion(): Promise<Resultado> {
+  if (!supabase) return { error: "Sin conexión con la base de datos." };
+  const { data } = await supabase.auth.getSession();
+  const user = data.session?.user;
+  if (!user) return { error: "El enlace no es válido o ya venció." };
+  const p = await asegurarPerfil(supabase, user);
+  if (p.error || !p.usuario) return { error: p.error };
+  guardar(p.usuario);
+  if (p.avisoCodigo) localStorage.setItem(AVISO_KEY, JSON.stringify(p.avisoCodigo));
+  return {};
 }

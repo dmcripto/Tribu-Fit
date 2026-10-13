@@ -50,6 +50,7 @@ export default function Login() {
         <button className="btn-primary" disabled={enviando}>
           {enviando ? "Entrando..." : "Entrar"}
         </button>
+        <Link href="/olvide" className="text-sm font-bold text-orange-600">¿Olvidaste tu contraseña?</Link>
         <p className="text-sm text-zinc-500">
           ¿Aún no tienes cuenta?{" "}
           <Link href="/registro" className="font-bold text-orange-600">Crear cuenta</Link>

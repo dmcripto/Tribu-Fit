@@ -28,6 +28,8 @@ export default function Registro() {
     if (!/\S+@\S+\.\S+/.test(email)) return setError("Escribe un correo válido.");
     if (password.length < 8)
       return setError("La contraseña necesita 8 caracteres o más.");
+    if (!f.get("terminos"))
+      return setError("Para crear tu cuenta debes aceptar los Términos y la Política de privacidad.");
     if (!f.get("datosSalud"))
       return setError(
         "Necesitamos tu permiso para tratar datos de salud y calcular tu progreso.",
@@ -42,6 +44,7 @@ export default function Registro() {
       codigoEntrenador: String(f.get("codigoEntrenador") ?? "").trim().toUpperCase(),
       objetivo: String(f.get("objetivo")),
       nivel: String(f.get("nivel")),
+      terminos: true,
       datosSalud: true,
       comparteTribu: f.get("comparteTribu") === "on",
       comparteEntrenador: f.get("comparteEntrenador") === "on",
@@ -118,6 +121,14 @@ export default function Registro() {
             <option>Avanzado</option>
           </select>
         </div>
+        <label className="flex items-start gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+          <input type="checkbox" name="terminos" className="mt-1 accent-orange-600" />
+          <span>
+            Tengo 16 años o más y acepto los{" "}
+            <Link href="/terminos" target="_blank" className="font-bold text-orange-600 underline">Términos de uso</Link> y la{" "}
+            <Link href="/privacidad" target="_blank" className="font-bold text-orange-600 underline">Política de privacidad</Link>.
+          </span>
+        </label>
         <label className="flex items-start gap-3 text-sm text-zinc-600 dark:text-zinc-400">
           <input type="checkbox" name="datosSalud" className="mt-1 accent-orange-600" />
           Acepto el tratamiento de mis datos de salud para calcular mi progreso.

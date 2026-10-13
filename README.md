@@ -33,7 +33,7 @@ Para usar Supabase:
 
 ## Pantallas
 
-`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas`, `/pagos` y `/entrenador` (solo cuentas de entrenador/a).
+`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas`, `/pagos`, `/cuenta`, `/olvide`, `/nueva-clave`, `/terminos`, `/privacidad` y `/entrenador` (solo cuentas de entrenador/a).
 
 ## Entrenador/a y alumnos
 
@@ -52,6 +52,14 @@ Para usar Supabase:
 - El seguimiento personalizado (plan de rutinas y objetivo de nutrición) es **premium**. Si la cuota vence y pasan los días de gracia, se bloquea solo, y vuelve al confirmar un pago nuevo. La entrenadora puede bloquear o dar cortesía a mano. El bloqueo se aplica en la base de datos (función `premium_activo`), no solo en la interfaz.
 - Una entrenadora que no configura un cobro no bloquea a nadie.
 
+## Cuenta, recuperar contraseña y aviso legal
+
+- **Confirmación de correo:** el enlace del correo lleva a `/confirmado`, que termina el alta y entra a la app. Si Supabase redirige a la portada, esta reenvía el enlace a `/confirmado` (o a `/nueva-clave` si es de recuperación).
+- **Recuperar contraseña:** `/olvide` envía un enlace por correo y `/nueva-clave` permite elegir la clave nueva. En Supabase hay que configurar, en *Authentication → URL Configuration*, el **Site URL** (`https://tribu-fit.vercel.app`) y añadir `https://tribu-fit.vercel.app/nueva-clave` a **Redirect URLs**. El correo predeterminado de Supabase tiene un límite muy bajo de envíos por hora: para uso real conviene configurar un SMTP propio (*Authentication → SMTP Settings*).
+- **Aviso legal:** `/terminos` y `/privacidad`. Son una **plantilla orientativa** y deben revisarse con un profesional antes de abrir al público. El registro exige aceptarlos y guarda la versión aceptada (`VERSION_LEGAL` en `src/lib/legal.ts`; súbela cuando cambien los textos).
+- **Variables de entorno opcionales** (Vercel, *Settings → Environment Variables*): `NEXT_PUBLIC_RESPONSABLE` (nombre o razón social) y `NEXT_PUBLIC_CONTACTO_EMAIL` (correo para derechos de datos). Salen en las páginas legales.
+- **Derechos del usuario** (`/cuenta`): descargar sus datos, cambiar permisos de compartir, cambiar contraseña y **eliminar la cuenta** (función `eliminar_mi_cuenta`, migración 005).
+
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`).
