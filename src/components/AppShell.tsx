@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useRef } from "react";
 import { salir, USER_KEY } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
 import { usePropuestasPendientes } from "@/lib/repo";
@@ -27,15 +28,48 @@ export function useUsuario() {
   return useLocal<Usuario | null>(USER_KEY, null)[0];
 }
 
+/** ¿El gesto empezó en un campo de texto o en una zona con scroll horizontal (p. ej. un gráfico)? */
+function gestoPropio(el: EventTarget | null): boolean {
+  for (let n = el as HTMLElement | null; n && n !== document.body; n = n.parentElement) {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(n.tagName) || n.isContentEditable) return true;
+    if (n.scrollWidth > n.clientWidth + 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowX)) return true;
+  }
+  return false;
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const usuario = useUsuario();
   const ruta = usePathname();
   const router = useRouter();
   const enlaces = usuario?.rol === "entrenador" ? enlacesEntrenador : enlacesAtleta;
   const pendientes = usePropuestasPendientes(usuario);
+  const toque = useRef<{ x: number; y: number } | null>(null);
+
+  // Deslizar con el dedo a izquierda/derecha cambia de pestaña (como en una app nativa).
+  const alTocar = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    toque.current = e.touches.length === 1 && t && !gestoPropio(e.target) ? { x: t.clientX, y: t.clientY } : null;
+  };
+  const alSoltar = (e: React.TouchEvent) => {
+    const ini = toque.current;
+    toque.current = null;
+    const t = e.changedTouches[0];
+    if (!ini || !t || !usuario) return;
+    const dx = t.clientX - ini.x;
+    const dy = t.clientY - ini.y;
+    if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
+    const i = enlaces.findIndex((l) => l.href === ruta);
+    const destino = enlaces[i + (dx < 0 ? 1 : -1)];
+    if (i >= 0 && destino) router.push(destino.href);
+  };
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-28 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5 md:pb-8">
+    <div
+      onTouchStart={alTocar}
+      onTouchEnd={alSoltar}
+      onTouchCancel={() => { toque.current = null; }}
+      className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-28 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5 md:pb-8"
+    >
       <header className="flex items-center justify-between gap-3">
         <Link href="/" aria-label="Tribu Fit, inicio" className="shrink-0">
           <Image src="/logo.png" alt="Tribu Fit" width={44} height={44} />
