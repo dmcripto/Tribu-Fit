@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import DescargaApk from "@/components/DescargaApk";
 import InstalarApp from "@/components/InstalarApp";
+import QrDescarga from "@/components/QrDescarga";
 import { APK } from "@/lib/apk";
 
 export const metadata = { title: "Descargar la app · Tribu Fit" };
@@ -24,6 +25,12 @@ export default function Descargar() {
       <h1 className="text-4xl font-black uppercase">Tribu Fit en tu celular</h1>
 
       <DescargaApk />
+
+      <section className="tarjeta flex flex-col items-center gap-3 text-center" aria-label="Código QR de descarga">
+        <h2 className="subtitulo">Escanea y descarga</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">¿Estás en la computadora o quieres pasárselo a alguien? Escanea este código con el celular.</p>
+        <QrDescarga className="size-52" />
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-xl font-black uppercase">Instalar en Android</h2>

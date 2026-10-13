@@ -1,0 +1,12 @@
+QR de Tribu Fit para imprimir (apunta a https://tribu-fit.vercel.app/app, que lleva a la descarga de la app)
+
+remera-qr-diseno.pdf / .png   Diseño listo, 30 x 40 cm a 300 dpi. Tarjeta blanca con borde naranja: se lee sobre remeras de cualquier color. Es el que conviene mandar a la estampería.
+qr-tribufit-negro.svg / .png  Solo el QR, fondo transparente, negro. SVG = vectorial (serigrafía/vinilo). Para prendas CLARAS.
+qr-tribufit-blanco.svg / .png Solo el QR, fondo transparente, blanco. Para prendas OSCURAS (algunos celulares viejos leen peor los QR invertidos: probar antes de imprimir en serie).
+
+Consejos de impresión
+- Tamaño mínimo del QR: 4 x 4 cm. Recomendado 8 cm o más si va en el pecho/espalda.
+- No estirar ni deformar; no cambiar los colores del diseño con tarjeta.
+- Imprimir una prueba y escanearla con 2 o 3 celulares antes de hacer la tanda.
+- La dirección impresa es /app: si algún día cambia la página de descarga, el QR sigue funcionando porque /app se redirige. Si se cambia de dominio, conviene tenerlo ya definido ANTES de imprimir.
+- Para regenerar con otra dirección: node scripts/qr/matriz.mjs <url> && python3 scripts/qr/remera.py

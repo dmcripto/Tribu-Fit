@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  // Dirección corta y estable para el código QR (también el impreso en remeras).
+  async redirects() {
+    return [{ source: "/app", destination: "/descargar", permanent: false }];
+  },
   async headers() {
     const seguridad = [
       { key: "X-Content-Type-Options", value: "nosniff" },
