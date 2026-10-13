@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import Icono, { type NombreIcono } from "@/components/Iconos";
 import { useAvisos, useHilos } from "@/lib/comunidad";
 import { salir, USER_KEY } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
@@ -11,19 +12,20 @@ import { usePropuestasPendientes } from "@/lib/repo";
 import { useLocal } from "@/lib/store";
 import type { Usuario } from "@/lib/types";
 
-const enlacesAtleta = [
-  { href: "/panel", texto: "Inicio" },
-  { href: "/rutinas", texto: "Rutinas" },
-  { href: "/nutricion", texto: "Nutrición" },
-  { href: "/medidas", texto: "Progreso" },
-  { href: "/chat", texto: "Chat" },
-  { href: "/mas", texto: "Más" },
+type Enlace = { href: string; texto: string; icono: NombreIcono };
+const enlacesAtleta: Enlace[] = [
+  { href: "/panel", texto: "Inicio", icono: "inicio" },
+  { href: "/rutinas", texto: "Rutinas", icono: "rutinas" },
+  { href: "/nutricion", texto: "Nutrición", icono: "nutricion" },
+  { href: "/medidas", texto: "Progreso", icono: "progreso" },
+  { href: "/chat", texto: "Chat", icono: "chat" },
+  { href: "/mas", texto: "Más", icono: "mas" },
 ];
-const enlacesEntrenador = [
-  { href: "/entrenador", texto: "Alumnos" },
-  { href: "/propuestas", texto: "Propuestas" },
-  { href: "/chat", texto: "Chat" },
-  { href: "/mas", texto: "Más" },
+const enlacesEntrenador: Enlace[] = [
+  { href: "/entrenador", texto: "Alumnos", icono: "alumnos" },
+  { href: "/propuestas", texto: "Propuestas", icono: "propuestas" },
+  { href: "/chat", texto: "Chat", icono: "chat" },
+  { href: "/mas", texto: "Más", icono: "mas" },
 ];
 
 /** Páginas que cuelgan de «Más»: mantienen esa pestaña marcada. */
@@ -93,15 +95,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 pb-28 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5 md:pb-8"
     >
       <header className="flex items-center justify-between gap-3">
-        <Link href="/" aria-label="Tribu Fit, inicio" className="shrink-0">
-          <Image src="/logo.png" alt="Tribu Fit" width={44} height={44} />
+        <Link href="/" aria-label="Tribu Fit, inicio" className="shrink-0 rounded-full ring-2 ring-orange-500/60 ring-offset-2 ring-offset-[var(--background)]">
+          <Image src="/logo.png" alt="Tribu Fit" width={44} height={44} className="rounded-full" />
         </Link>
 
         {usuario && (
           // En el móvil la barra va abajo, al alcance del pulgar. En pantallas grandes, arriba.
           <nav
             aria-label="Principal"
-            className="fixed inset-x-0 bottom-0 z-20 flex border-t border-zinc-200 bg-background pb-[env(safe-area-inset-bottom)] dark:border-zinc-800 md:static md:z-auto md:gap-1 md:border-0 md:bg-transparent md:pb-0"
+            className="fixed inset-x-0 bottom-0 z-20 flex border-t border-[var(--borde)] bg-[var(--superficie)]/85 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:static md:z-auto md:gap-1 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none"
           >
             {enlaces.map((e) => {
               const activo = ruta === e.href || (e.href === "/mas" && DE_MAS.includes(ruta) && !enlaces.some((x) => x.href === ruta));
@@ -110,19 +112,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   key={e.href}
                   href={e.href}
                   aria-current={activo ? "page" : undefined}
-                  className={`flex flex-1 items-center justify-center border-t-2 px-0.5 py-3.5 text-xs font-bold md:flex-none md:rounded-md md:border-t-0 md:px-3 md:py-2 md:text-sm ${
+                  className={`group relative flex flex-1 flex-col items-center justify-center gap-0.5 px-0.5 pb-2 pt-2.5 text-[11px] font-bold transition md:flex-none md:flex-row md:gap-2 md:rounded-xl md:px-4 md:py-2 md:text-sm ${
                     activo
-                      ? "border-orange-600 text-orange-600 md:bg-orange-600 md:text-white"
-                      : "border-transparent text-zinc-500 hover:text-orange-600"
+                      ? "text-orange-600 md:bg-gradient-to-r md:from-orange-500 md:to-red-600 md:text-white md:shadow-md md:shadow-orange-600/30"
+                      : "text-zinc-500 hover:text-orange-600"
                   }`}
                 >
-                  {e.texto}
-                  {e.href === "/propuestas" && pendientes > 0 && (
-                    <span aria-label={`${pendientes} pendientes`} className="ml-1.5 rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] leading-none text-white">{pendientes}</span>
-                  )}
-                  {e.href === "/chat" && mensajesSinLeer > 0 && (
-                    <span aria-label={`${mensajesSinLeer} mensajes sin leer`} className="ml-1 rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] leading-none text-white">{mensajesSinLeer}</span>
-                  )}
+                  <span className={`relative flex h-7 w-12 items-center justify-center rounded-full transition md:h-auto md:w-auto ${activo ? "bg-orange-500/15 md:bg-transparent" : "group-active:scale-90"}`}>
+                    <Icono nombre={e.icono} className="size-[22px] md:size-5" />
+                    {e.href === "/propuestas" && pendientes > 0 && (
+                      <span aria-label={`${pendientes} pendientes`} className="absolute -right-0.5 -top-1 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] leading-none text-white">{pendientes}</span>
+                    )}
+                    {e.href === "/chat" && mensajesSinLeer > 0 && (
+                      <span aria-label={`${mensajesSinLeer} mensajes sin leer`} className="absolute -right-0.5 -top-1 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] leading-none text-white">{mensajesSinLeer}</span>
+                    )}
+                  </span>
+                  <span>{e.texto}</span>
                 </Link>
               );
             })}
@@ -130,30 +135,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
 
         {usuario && (
-          <div className="flex shrink-0 items-center gap-4 text-sm text-zinc-500">
-            <Link href="/avisos" aria-label={avisosSinLeer > 0 ? `Avisos, ${avisosSinLeer} sin leer` : "Avisos"} aria-current={ruta === "/avisos" ? "page" : undefined} className="relative">
-              <span aria-hidden="true">🔔</span>
-              {avisosSinLeer > 0 && <span className="absolute -right-2 -top-2 rounded-full bg-orange-600 px-1.5 text-[10px] leading-4 text-white">{avisosSinLeer}</span>}
+          <div className="flex shrink-0 items-center gap-2 text-sm text-zinc-500">
+            <Link href="/avisos" aria-label={avisosSinLeer > 0 ? `Avisos, ${avisosSinLeer} sin leer` : "Avisos"} aria-current={ruta === "/avisos" ? "page" : undefined}
+              className="relative flex size-10 items-center justify-center rounded-full border border-[var(--borde)] bg-[var(--superficie)] hover:border-orange-500">
+              <Icono nombre="campana" className="size-5" />
+              {avisosSinLeer > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 text-white">{avisosSinLeer}</span>}
             </Link>
-            <Link href="/cuenta" aria-current={ruta === "/cuenta" ? "page" : undefined} className={ruta === "/cuenta" ? "font-bold text-orange-600" : "underline"}>
-              Cuenta
+            <Link href="/cuenta" aria-label="Cuenta" aria-current={ruta === "/cuenta" ? "page" : undefined}
+              className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600 text-base font-black text-white shadow-md shadow-orange-600/30">
+              <span aria-hidden="true">{usuario.nombre.trim().charAt(0).toUpperCase() || "?"}</span>
+              <span className="sr-only">Cuenta</span>
             </Link>
             <button
               type="button"
+              aria-label="Salir"
               onClick={async () => {
                 await salir();
                 router.push("/");
               }}
-              className="underline"
+              className="flex size-10 items-center justify-center rounded-full border border-[var(--borde)] bg-[var(--superficie)] hover:border-orange-500"
             >
-              Salir
+              <Icono nombre="salir" className="size-5" />
+              <span className="sr-only">Salir</span>
             </button>
           </div>
         )}
       </header>
 
       {modoDemo && (
-        <p className="rounded-md border border-orange-600/40 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-400">
+        <p className="rounded-xl border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300">
           Modo demo: los datos se guardan solo en este navegador.
         </p>
       )}

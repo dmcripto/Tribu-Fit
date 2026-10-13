@@ -629,9 +629,9 @@ type ApiPagos = {
 function pagosDeMuestra(hoy: string): Pago[] {
   if (!hoy) return [];
   return [
-    { id: "ejemplo-p1", alumno_id: "ejemplo-lucia", monto: 30, moneda: "USD", metodo: "qr", referencia: "OP-884102", estado: "pendiente", creado: sumarDias(hoy, -1) },
-    { id: "ejemplo-p2", alumno_id: "ejemplo-ivan", monto: 30, moneda: "USD", metodo: "tarjeta", referencia: "", estado: "confirmado", vence: sumarDias(hoy, 12), creado: sumarDias(hoy, -18) },
-    { id: "ejemplo-p3", alumno_id: "ejemplo-andres", monto: 30, moneda: "USD", metodo: "transferencia", referencia: "TR-5521", estado: "confirmado", vence: sumarDias(hoy, -4), creado: sumarDias(hoy, -34) },
+    { id: "ejemplo-p1", alumno_id: "ejemplo-lucia", monto: 25000, moneda: "ARS", metodo: "qr", referencia: "OP-884102", estado: "pendiente", creado: sumarDias(hoy, -1) },
+    { id: "ejemplo-p2", alumno_id: "ejemplo-ivan", monto: 25000, moneda: "ARS", metodo: "tarjeta", referencia: "", estado: "confirmado", vence: sumarDias(hoy, 12), creado: sumarDias(hoy, -18) },
+    { id: "ejemplo-p3", alumno_id: "ejemplo-andres", monto: 25000, moneda: "ARS", metodo: "transferencia", referencia: "TR-5521", estado: "confirmado", vence: sumarDias(hoy, -4), creado: sumarDias(hoy, -34) },
   ];
 }
 

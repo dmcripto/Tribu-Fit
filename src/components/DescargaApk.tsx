@@ -1,17 +1,18 @@
 import Link from "next/link";
+import Icono from "@/components/Iconos";
 import { APK, tamano } from "@/lib/apk";
 
 /** Tarjeta de descarga de la app Android. `completa` añade la huella para verificar el archivo. */
 export default function DescargaApk({ enlaceDetalle = false }: { enlaceDetalle?: boolean }) {
   return (
-    <section id="descargar" className="flex flex-col gap-3 rounded-xl border-2 border-orange-600 p-5">
-      <h2 className="text-2xl font-black uppercase">Descarga la app</h2>
+    <section id="descargar" className="relative flex flex-col gap-3 overflow-hidden rounded-3xl border border-orange-500/40 bg-gradient-to-br from-orange-500/15 via-[var(--superficie)] to-amber-400/10 p-6 shadow-lg shadow-orange-900/10">
+      <h2 className="titulo !text-3xl">Descarga la app</h2>
       <p className="text-zinc-600 dark:text-zinc-400">
         Llévate Tribu Fit en el celular: entra directo a tu panel, rutinas y nutrición.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <a href={APK.archivo} download="tribu-fit.apk" className="btn-primary">
-          Descargar para Android (APK)
+          <Icono nombre="descarga" className="size-5" /> Descargar para Android (APK)
         </a>
         <span className="text-xs text-zinc-500">Versión {APK.version} · {tamano(APK.bytes)}</span>
       </div>

@@ -18,7 +18,7 @@ import { modoDemo } from "@/lib/supabase";
 import { useToday } from "@/lib/store";
 import type { Metodo, Pago, PagoConfig, Usuario } from "@/lib/types";
 
-const MONEDAS = ["USD", "EUR", "MXN", "COP", "PEN", "ARS", "CLP", "BOB", "DOP", "UYU", "GTQ", "CRC", "PYG", "VES"];
+const MONEDAS = ["ARS", "USD", "EUR", "MXN", "COP", "PEN", "CLP", "BOB", "DOP", "UYU", "GTQ", "CRC", "PYG", "VES"];
 
 const CUOTA: Record<EstadoCuota, { texto: string; clase: string }> = {
   sin_pagos: { texto: "Sin pagos", clase: "text-zinc-500" },
@@ -33,7 +33,14 @@ const ESTADO_PAGO: Record<Pago["estado"], { texto: string; clase: string }> = {
   rechazado: { texto: "Rechazado", clase: "text-red-600" },
 };
 
-const dinero = (n: number, moneda: string) => `${n.toFixed(2).replace(".", ",")} ${moneda}`;
+/** Importe con el formato del país (en pesos argentinos: $ 25.000). */
+const dinero = (n: number, moneda: string) => {
+  try {
+    return new Intl.NumberFormat("es-AR", { style: "currency", currency: moneda, maximumFractionDigits: Number.isInteger(n) ? 0 : 2 }).format(n);
+  } catch {
+    return `${n.toFixed(2).replace(".", ",")} ${moneda}`;
+  }
+};
 
 function Imagen({ src, alt, className }: { src: string; alt: string; className?: string }) {
   // Solo imágenes en data URL (validadas al subir): no se carga nada externo.
@@ -228,7 +235,7 @@ function FormCobro({
   msg: Mensaje;
   setMsg: (m: Mensaje) => void;
 }) {
-  const [moneda, setMoneda] = useState(inicial?.moneda ?? "USD");
+  const [moneda, setMoneda] = useState(inicial?.moneda ?? "ARS");
   const [precio, setPrecio] = useState(inicial ? String(inicial.precio).replace(".", ",") : "");
   const [instrucciones, setInstrucciones] = useState(inicial?.instrucciones ?? "");
   const [enlace, setEnlace] = useState(inicial?.enlace ?? "");
@@ -266,7 +273,7 @@ function FormCobro({
       <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
         <div>
           <label className="etiqueta" htmlFor="cb-precio">Cuota mensual</label>
-          <input className="campo" id="cb-precio" inputMode="decimal" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="30" />
+          <input className="campo" id="cb-precio" inputMode="decimal" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="25000" />
         </div>
         <div>
           <label className="etiqueta" htmlFor="cb-moneda">Moneda</label>
@@ -277,9 +284,9 @@ function FormCobro({
       </div>
       <div>
         <label className="etiqueta" htmlFor="cb-enlace">Enlace de pago con tarjeta (opcional)</label>
-        <CampoTexto id="cb-enlace" valor={enlace} onCambio={setEnlace} placeholder="https://..." autoComplete="off" />
+        <CampoTexto id="cb-enlace" valor={enlace} onCambio={setEnlace} placeholder="https://mpago.la/..." autoComplete="off" />
         <p className="mt-1 text-xs text-zinc-500">
-          Crea un enlace de cobro en tu proveedor (Mercado Pago, Stripe, PayPal u otro) y pégalo aquí. El alumno paga con su tarjeta en la página de ese proveedor.
+          En Mercado Pago entra a «Cobrar» → «Link de pago», crea uno por el valor de tu cuota y pégalo aquí. El alumno paga con tarjeta de débito, crédito o dinero en cuenta en la página de Mercado Pago. Después tú confirmas el pago en esta pantalla.
         </p>
       </div>
       <div className="flex flex-col gap-2">
@@ -301,7 +308,7 @@ function FormCobro({
       </div>
       <div>
         <label className="etiqueta" htmlFor="cb-instr">Instrucciones para tus alumnos</label>
-        <textarea className="campo min-h-24" id="cb-instr" value={instrucciones} onChange={(e) => setInstrucciones(e.target.value)} placeholder="Transferencia: Banco X, cuenta 000, titular. Envía tu comprobante aquí." />
+        <textarea className="campo min-h-24" id="cb-instr" value={instrucciones} onChange={(e) => setInstrucciones(e.target.value)} placeholder="Transferencia a Mercado Pago o banco. Alias: tribu.fit · CBU/CVU: 0000… · Titular: … · CUIL: … Envía tu comprobante por acá." />
       </div>
       <Aviso msg={msg} />
       <div><button className="btn-primary" disabled={enviando}>{enviando ? "Guardando..." : "Guardar cobro"}</button></div>
@@ -359,7 +366,7 @@ function VistaEntrenador({ usuario }: { usuario: Usuario }) {
     if (!(monto > 0)) return setManualMsg({ ok: false, texto: "Escribe el monto cobrado." });
     const vence = siguienteVencimiento(deAlumno(id), hoy);
     const fallo = await registrar({
-      alumno_id: id, monto, moneda: config?.moneda ?? "USD", metodo: String(f.get("metodo")) as Metodo,
+      alumno_id: id, monto, moneda: config?.moneda ?? "ARS", metodo: String(f.get("metodo")) as Metodo,
       referencia: "", confirmado: { vence },
     });
     setManualMsg(fallo ? { ok: false, texto: fallo } : { ok: true, texto: `Cobro registrado. Cuota al día hasta el ${formatoFecha(vence)}.` });
