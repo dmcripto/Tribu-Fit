@@ -7,8 +7,9 @@ import AsignarPlan from "@/components/AsignarPlan";
 import Chip from "@/components/Chip";
 import GraficoPeso from "@/components/GraficoPeso";
 import Pestanas from "@/components/Pestanas";
-import { FotosProgreso, MarcasEjercicio } from "@/components/ProgresoExtra";
-import { alertasEntrenador, resumenSemanal } from "@/lib/logros";
+import { ChequeoMensual, MarcasEjercicio } from "@/components/ProgresoExtra";
+import { alertasEntrenador, estadoChequeo, resumenSemanal } from "@/lib/logros";
+import { useChequeos } from "@/lib/comunidad";
 import {
   PREMIUM_TEXTO, estadoAlumno, estadoCuota, estadoPremium, formatoFecha, entrenosSemana, planTerminado,
   promedioNutricion, semanaActual, type Estado,
@@ -88,6 +89,7 @@ export default function Entrenador() {
   const cartera = useCartera(usuario);
   const { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion, perfiles, propuestas, crearPropuesta } = cartera;
   useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador");
+  const chequeos = useChequeos(usuario);
   const { config } = usePagoConfig(usuario);
   const { pagos } = usePagos(usuario);
   const [sel, setSel] = useState<string | null>(null);
@@ -153,7 +155,7 @@ export default function Entrenador() {
 
         {alumnos.length > 0 && (() => {
           const bloqueados = new Set(config === null ? [] : filas.filter((f) => !f.premium.activo).map((f) => f.a.id));
-          const alertas = alertasEntrenador(alumnos, hoy, bloqueados);
+          const alertas = alertasEntrenador(alumnos, hoy, bloqueados, chequeos);
           const res = resumenSemanal(alumnos, hoy);
           return (
             <>
@@ -222,6 +224,7 @@ export default function Entrenador() {
                         </Chip>
                       )}
                       {pendientesDe(a.id) > 0 && <Chip tono="aviso">Propuesta por revisar</Chip>}
+                      {a.permiso && ["toca", "vencido"].includes(estadoChequeo(chequeos[a.id], hoy).estado) && <Chip tono="aviso">Chequeo pendiente</Chip>}
                     </span>
                   </button>
                 </li>
@@ -384,7 +387,7 @@ export default function Entrenador() {
           ) : (
             <>
               <MarcasEjercicio uid={actual.id} soloLectura />
-              <FotosProgreso uid={actual.id} soloLectura />
+              <ChequeoMensual uid={actual.id} soloLectura />
             </>
           )}
         </div>

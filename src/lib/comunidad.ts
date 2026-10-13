@@ -6,7 +6,7 @@ import { ENTRENOS_KEY, VACIO_ENTRENOS, sumarDias } from "./datos";
 import { muestra, useRemoto } from "./repo";
 import { useLocal, useToday } from "./store";
 import { modoDemo, supabase } from "./supabase";
-import type { Aviso, FilaRanking, FotoProgreso, Marca, Mensaje, Reto, Usuario } from "./types";
+import type { AnguloFoto, Aviso, FilaRanking, FotoProgreso, Marca, Mensaje, Reto, Usuario } from "./types";
 
 const db = () => supabase as SupabaseClient;
 
@@ -213,7 +213,7 @@ export function useRecordatoriosLeidos() {
 
 export type ApiFotos = {
   fotos: FotoProgreso[];
-  anadir: (f: { fecha: string; nota: string; imagen: string }) => Promise<string | null>;
+  anadir: (f: { fecha: string; nota: string; imagen: string; tipo: AnguloFoto }) => Promise<string | null>;
   borrar: (id: string) => Promise<void>;
 };
 
@@ -222,8 +222,8 @@ const esEjemplo = (uid: string) => uid.startsWith("ejemplo-");
 
 function useFotosLocal(uid: string): ApiFotos {
   const [guardadas, set] = useLocal(FOTOS_KEY, VACIO_FOTOS);
-  const fotos = esEjemplo(uid) ? VACIO_FOTOS : guardadas;
-  const anadir = useCallback(async (f: { fecha: string; nota: string; imagen: string }) => {
+  const fotos = useMemo(() => (esEjemplo(uid) ? VACIO_FOTOS : guardadas.map((f) => ({ ...f, tipo: f.tipo ?? "otra" }))), [uid, guardadas]);
+  const anadir = useCallback(async (f: { fecha: string; nota: string; imagen: string; tipo: AnguloFoto }) => {
     try {
       set((p) => [...p, { id: crypto.randomUUID(), ...f }]);
       return null as string | null;
@@ -237,13 +237,22 @@ function useFotosLocal(uid: string): ApiFotos {
 function useFotosRemoto(uid: string): ApiFotos {
   const cargar = useCallback(async (): Promise<FotoProgreso[]> => {
     if (!uid) return [];
-    const { data } = await db().from("fotos_progreso").select("id,fecha,nota,imagen")
-      .eq("usuario_id", uid).order("fecha", { ascending: false }).order("id", { ascending: false }).limit(60);
-    return (data ?? []).map((f) => ({ id: String(f.id), fecha: f.fecha, nota: f.nota, imagen: f.imagen }));
+    const pedir = (cols: string) => db().from("fotos_progreso").select(cols)
+      .eq("usuario_id", uid).order("fecha", { ascending: false }).order("id", { ascending: false }).limit(90);
+    let r = await pedir("id,fecha,nota,imagen,tipo");
+    // Si aún no se ejecutó la migración 010 (columna tipo), se cargan igual, sin ángulo.
+    if (r.error) r = await pedir("id,fecha,nota,imagen");
+    return ((r.data ?? []) as unknown as { id: number; fecha: string; nota: string; imagen: string; tipo?: AnguloFoto }[])
+      .map((f) => ({ id: String(f.id), fecha: f.fecha, nota: f.nota, imagen: f.imagen, tipo: f.tipo ?? "otra" }));
   }, [uid]);
   const [fotos, recargar] = useRemoto(cargar, VACIO_FOTOS);
-  const anadir = useCallback(async (f: { fecha: string; nota: string; imagen: string }) => {
-    const { error } = await db().from("fotos_progreso").insert({ usuario_id: uid, ...f });
+  const anadir = useCallback(async (f: { fecha: string; nota: string; imagen: string; tipo: AnguloFoto }) => {
+    let { error } = await db().from("fotos_progreso").insert({ usuario_id: uid, ...f });
+    if (error && /tipo/i.test(error.message)) {
+      const { tipo: _omitido, ...sinTipo } = f;
+      void _omitido;
+      ({ error } = await db().from("fotos_progreso").insert({ usuario_id: uid, ...sinTipo }));
+    }
     if (!error) recargar();
     return error ? (/fotos_progreso/i.test(error.message) ? "Falta activar las fotos en la base de datos (migración 007)." : error.message) : null;
   }, [uid, recargar]);
@@ -254,6 +263,31 @@ function useFotosRemoto(uid: string): ApiFotos {
   return { fotos, anadir, borrar };
 }
 export const useFotos: (uid: string) => ApiFotos = modoDemo ? useFotosLocal : useFotosRemoto;
+
+/** Fecha de la última foto de cada alumno (sin descargar las imágenes), para saber quién tiene el chequeo al día. */
+function useChequeosLocal(yo: Usuario | null): Record<string, string> {
+  const hoy = useToday();
+  const [fotos] = useLocal(FOTOS_KEY, VACIO_FOTOS);
+  return useMemo(() => {
+    if (!yo || !hoy) return {};
+    const d = (n: number) => sumarDias(hoy, -n);
+    const propio = fotos.map((f) => f.fecha).sort().at(-1);
+    return { ...(propio ? { [yo.id]: propio } : {}), "ejemplo-lucia": d(41), "ejemplo-andres": d(12), "ejemplo-ivan": d(33) };
+  }, [yo, hoy, fotos]);
+}
+function useChequeosRemoto(yo: Usuario | null): Record<string, string> {
+  const uid = yo?.rol === "entrenador" ? yo.id : "";
+  const cargar = useCallback(async (): Promise<Record<string, string>> => {
+    if (!uid) return {};
+    const { data } = await db().from("fotos_progreso").select("usuario_id,fecha").order("fecha", { ascending: false }).limit(5000);
+    const m: Record<string, string> = {};
+    for (const f of (data ?? []) as { usuario_id: string; fecha: string }[]) if (!m[f.usuario_id]) m[f.usuario_id] = f.fecha;
+    return m;
+  }, [uid]);
+  const [m] = useRemoto(cargar, {} as Record<string, string>);
+  return m;
+}
+export const useChequeos: (yo: Usuario | null) => Record<string, string> = modoDemo ? useChequeosLocal : useChequeosRemoto;
 
 /* ---------- Marcas por ejercicio ---------- */
 

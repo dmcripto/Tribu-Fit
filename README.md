@@ -73,7 +73,7 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`, `010_chequeo_mensual.sql`).
 
 ## App móvil (PWA y APK)
 
@@ -104,3 +104,7 @@ Cómo funciona: el alumno toca «Pagar con Mercado Pago» → `POST /api/mp/paga
 Seguridad: el token se cifra con AES‑256‑GCM (`src/lib/servidor/cripto.ts`) y se guarda en `mp_cuentas`, tabla sin acceso desde la app (solo la clave de servicio). Nunca vuelve al navegador. El webhook no valida la firma `x-signature` (cada entrenadora tiene su propia aplicación); la autenticidad se garantiza consultando el pago directamente.
 
 Bancos y billeteras: tabla `cuentas_bancarias` (banco, titular, alias, CBU/CVU con verificación del dígito, CUIT/CUIL). Los alumnos ven las cuentas de su entrenadora con botón de copiar.
+
+## Chequeo mensual con fotos (migración 010)
+
+Cada 30 días el alumno sube 3 fotos (frente, perfil, espalda) en **Progreso**; la app compara con su primer chequeo («antes y después»), avisa cuando se acerca (25 días), toca (30) o vence (35) y la entrenadora ve el estado en las alertas, la lista de alumnos y la ficha (solo si el alumno dio permiso). Sin la migración 010 las fotos siguen funcionando, sin ángulo.

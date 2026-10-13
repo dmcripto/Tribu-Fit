@@ -650,3 +650,11 @@ begin
 end;
 $$;
 create trigger cuentas_bancarias_aviso after insert on cuentas_bancarias for each row execute function aviso_cuenta_bancaria();
+
+-- Si ya ejecutaste schema.sql antes, ejecuta SOLO este archivo. Requiere la 007.
+
+alter table fotos_progreso
+  add column tipo text not null default 'otra' check (tipo in ('frente', 'perfil', 'espalda', 'otra'));
+
+-- Para que la entrenadora vea rápido quién tiene el chequeo al día.
+create index fotos_progreso_fecha_idx on fotos_progreso (usuario_id, fecha desc);

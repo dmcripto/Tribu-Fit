@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import GraficoPeso from "@/components/GraficoPeso";
-import { FotosProgreso, MarcasEjercicio } from "@/components/ProgresoExtra";
+import { ChequeoMensual, MarcasEjercicio } from "@/components/ProgresoExtra";
 import { useMedidas } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 
@@ -107,8 +107,8 @@ export default function Medidas() {
           )}
         </section>
       </div>
+      <ChequeoMensual uid={usuario?.id ?? ""} />
       <MarcasEjercicio uid={usuario?.id ?? ""} />
-      <FotosProgreso uid={usuario?.id ?? ""} />
     </main>
   );
 }

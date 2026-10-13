@@ -1,4 +1,4 @@
-import { racha } from "./datos";
+import { racha, sumarDias } from "./datos";
 import type { Alumno, Entreno, FotoProgreso, Marca, Medida } from "./types";
 
 export type Insignia = { id: string; titulo: string; detalle: string; lograda: boolean; progreso?: string };
@@ -57,18 +57,21 @@ export function mejoresMarcas(marcas: Marca[]) {
 
 /* ---------- Alertas para la entrenadora ---------- */
 
-export type Alerta = { alumno_id: string; nombre: string; tipo: "inactivo" | "sin_peso" | "estancado" | "sin_permiso" | "pago"; texto: string; gravedad: 1 | 2 };
+export type Alerta = { alumno_id: string; nombre: string; tipo: "inactivo" | "sin_peso" | "estancado" | "sin_permiso" | "pago" | "chequeo"; texto: string; gravedad: 1 | 2 };
 
 const dif = (a: string, b: string) => Math.round((Date.parse(a) - Date.parse(b)) / 86_400_000);
 
 /** Detecta a quién atender primero. Un alumno puede tener varias alertas. */
-export function alertasEntrenador(alumnos: Alumno[], hoy: string, bloqueados: Set<string>): Alerta[] {
+export function alertasEntrenador(alumnos: Alumno[], hoy: string, bloqueados: Set<string>, chequeos: Record<string, string> = {}): Alerta[] {
   if (!hoy) return [];
   const out: Alerta[] = [];
   for (const a of alumnos) {
     const base = { alumno_id: a.id, nombre: a.nombre };
     if (bloqueados.has(a.id)) out.push({ ...base, tipo: "pago", texto: "Su seguimiento premium está bloqueado (pago pendiente o vencido).", gravedad: 2 });
     if (!a.permiso) { out.push({ ...base, tipo: "sin_permiso", texto: "No comparte su progreso contigo.", gravedad: 1 }); continue; }
+    const ch = estadoChequeo(chequeos[a.id], hoy);
+    if (ch.estado === "vencido") out.push({ ...base, tipo: "chequeo", texto: `Su chequeo mensual con fotos lleva ${ch.dias} días sin hacerse.`, gravedad: 1 });
+    else if (ch.estado === "sin" && Object.keys(chequeos).length > 0) out.push({ ...base, tipo: "chequeo", texto: "Aún no subió fotos de chequeo.", gravedad: 1 });
     const ult = a.entrenos.map((e) => e.fecha).sort().at(-1);
     const sin = ult ? dif(hoy, ult) : null;
     if (sin === null) out.push({ ...base, tipo: "inactivo", texto: "Todavía no registra ningún entreno.", gravedad: 1 });
@@ -91,4 +94,18 @@ export function resumenSemanal(alumnos: Alumno[], hoy: string) {
   const entrenos = con.reduce((n, a) => n + a.entrenos.filter((e) => dif(hoy, e.fecha) >= 0 && dif(hoy, e.fecha) < 7).length, 0);
   const activos = con.filter((a) => a.entrenos.some((e) => dif(hoy, e.fecha) >= 0 && dif(hoy, e.fecha) < 7)).length;
   return { alumnos: alumnos.length, visibles: con.length, entrenos, activos, pctActivos: con.length ? Math.round((activos / con.length) * 100) : 0 };
+}
+
+/* ---------- Chequeo mensual ---------- */
+
+export const CICLO_CHEQUEO = 30;
+export type EstadoChequeo = { estado: "sin" | "al_dia" | "pronto" | "toca" | "vencido"; dias: number | null; proximo: string | null };
+
+/** Cada 30 días toca un chequeo con fotos. Pasados 5 días de ese plazo se considera vencido. */
+export function estadoChequeo(ultima: string | null | undefined, hoy: string): EstadoChequeo {
+  if (!hoy) return { estado: "al_dia", dias: null, proximo: null };
+  if (!ultima) return { estado: "sin", dias: null, proximo: null };
+  const dias = dif(hoy, ultima);
+  const estado = dias < CICLO_CHEQUEO - 5 ? "al_dia" : dias < CICLO_CHEQUEO ? "pronto" : dias < CICLO_CHEQUEO + 5 ? "toca" : "vencido";
+  return { estado, dias, proximo: sumarDias(ultima, CICLO_CHEQUEO) };
 }

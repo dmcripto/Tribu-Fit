@@ -153,7 +153,8 @@ export type Aviso = {
   creado: string;
 };
 
-export type FotoProgreso = { id: string; fecha: string; nota: string; imagen: string };
+export type AnguloFoto = "frente" | "perfil" | "espalda" | "otra";
+export type FotoProgreso = { id: string; fecha: string; nota: string; imagen: string; tipo: AnguloFoto };
 export type Marca = { id: string; fecha: string; ejercicio: string; peso_kg: number; reps: number };
 
 export type Reto = {
