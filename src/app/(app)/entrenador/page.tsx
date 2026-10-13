@@ -7,6 +7,8 @@ import AsignarPlan from "@/components/AsignarPlan";
 import Chip from "@/components/Chip";
 import GraficoPeso from "@/components/GraficoPeso";
 import Pestanas from "@/components/Pestanas";
+import { FotosProgreso, MarcasEjercicio } from "@/components/ProgresoExtra";
+import { alertasEntrenador, resumenSemanal } from "@/lib/logros";
 import {
   PREMIUM_TEXTO, estadoAlumno, estadoCuota, estadoPremium, formatoFecha, entrenosSemana, planTerminado,
   promedioNutricion, semanaActual, type Estado,
@@ -122,6 +124,44 @@ export default function Entrenador() {
 
         <CodigoInvitacion codigo={usuario.codigo} />
 
+        {alumnos.length > 0 && (() => {
+          const bloqueados = new Set(config === null ? [] : filas.filter((f) => !f.premium.activo).map((f) => f.a.id));
+          const alertas = alertasEntrenador(alumnos, hoy, bloqueados);
+          const res = resumenSemanal(alumnos, hoy);
+          return (
+            <>
+              <section className="tarjeta flex flex-col gap-2" aria-label="Resumen de la semana">
+                <h2 className="subtitulo">Esta semana</h2>
+                <p className="text-sm">
+                  <b>{res.entrenos}</b> entrenos de tu tribu · <b>{res.activos}</b> de {res.visibles} alumnos activos ({res.pctActivos} %)
+                </p>
+              </section>
+              <section className="tarjeta flex flex-col gap-2" aria-label="Alertas">
+                <h2 className="subtitulo">Atención primero{alertas.length > 0 ? ` · ${alertas.length}` : ""}</h2>
+                {alertas.length === 0 ? (
+                  <p className="text-sm text-zinc-500">Nada urgente. Tus alumnos van al día.</p>
+                ) : (
+                  <ul className="flex flex-col text-sm">
+                    {alertas.slice(0, 8).map((al, i) => (
+                      <li key={`${al.alumno_id}-${al.tipo}-${i}`} className="flex items-center justify-between gap-3 border-t border-zinc-200 py-2 first:border-0 dark:border-zinc-800">
+                        <span>
+                          <b className={al.gravedad === 2 ? "text-red-600" : ""}>{al.nombre}</b>
+                          <span className="block text-zinc-600 dark:text-zinc-400">{al.texto}</span>
+                        </span>
+                        <span className="flex shrink-0 gap-3">
+                          <Link href={`/chat?alumno=${al.alumno_id}`} className="font-bold text-orange-600">Escribir</Link>
+                          <button type="button" className="font-bold text-orange-600" onClick={() => abrir(al.alumno_id)}>Abrir</button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {alertas.length > 8 && <p className="text-xs text-zinc-500">Y {alertas.length - 8} más. Revisa la lista de abajo.</p>}
+              </section>
+            </>
+          );
+        })()}
+
         {alumnos.length === 0 ? (
           <section className="tarjeta">
             <p className="text-zinc-600 dark:text-zinc-400">
@@ -189,6 +229,7 @@ export default function Entrenador() {
         </button>
         <h1 className="titulo">{actual.nombre}</h1>
         <p className="text-sm text-zinc-500">{actual.objetivo || "Sin objetivo indicado"}</p>
+        <Link href={`/chat?alumno=${actual.id}`} className="btn-ghost w-fit">Escribirle</Link>
         <div className="flex flex-wrap gap-2">
           {actual.permiso ? <Chip tono={ESTADO[est.estado].tono}>{ESTADO[est.estado].texto}</Chip> : <Chip tono="neutro">Sin permiso</Chip>}
           {config !== null && (
@@ -207,6 +248,7 @@ export default function Entrenador() {
           { id: "resumen", texto: "Resumen" },
           { id: "rutinas", texto: "Rutinas" },
           { id: "nutricion", texto: "Nutrición" },
+          { id: "progreso", texto: "Fotos y marcas" },
           { id: "pago", texto: "Pago" },
         ]}
       />
@@ -305,6 +347,19 @@ export default function Entrenador() {
       {tab === "nutricion" && (
         <div role="tabpanel" className="tarjeta">
           <AsignarNutricion key={`nutri-${actual.id}`} alumno={actual} actual={objetivos[actual.id]} asignar={asignarNutricion} />
+        </div>
+      )}
+
+      {tab === "progreso" && (
+        <div role="tabpanel" className="flex flex-col gap-5">
+          {!actual.permiso ? (
+            <p className="tarjeta text-sm text-zinc-600 dark:text-zinc-400">Este alumno no ha dado permiso para compartir su progreso contigo.</p>
+          ) : (
+            <>
+              <MarcasEjercicio uid={actual.id} soloLectura />
+              <FotosProgreso uid={actual.id} soloLectura />
+            </>
+          )}
         </div>
       )}
 

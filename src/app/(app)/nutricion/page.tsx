@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import CampoTexto from "@/components/CampoTexto";
@@ -70,6 +71,7 @@ export default function Nutricion() {
       <PremiumAviso estado={premium} />
       <div>
         <h1 className="titulo">Nutrición</h1>
+        <p className="mt-2 text-sm"><Link href="/recetas" className="font-bold text-orange-600 underline">¿Sin ideas? Mira las recetas sugeridas para hoy</Link></p>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           {asignado ? (
             <>Objetivo <span className="font-bold text-orange-600">personalizado por tu entrenador/a</span>.</>

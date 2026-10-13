@@ -127,3 +127,42 @@ type BasePropuesta = {
 export type Propuesta =
   | (BasePropuesta & { tipo: "rutinas"; contenido: ContenidoRutinas })
   | (BasePropuesta & { tipo: "nutricion"; contenido: ObjetivoNutricion });
+
+/* ---------- Comunidad ---------- */
+
+export type Mensaje = {
+  id: string;
+  alumno_id: string;
+  entrenador_id: string;
+  de_entrenador: boolean;
+  texto: string;
+  /** De qué rutina o ejercicio habla el mensaje (opcional). */
+  contexto?: string;
+  leido: boolean;
+  creado: string;
+};
+
+export type AvisoTipo = "mensaje" | "plan" | "nutricion" | "pago" | "reto" | "otro";
+export type Aviso = {
+  id: string;
+  tipo: AvisoTipo;
+  titulo: string;
+  texto: string;
+  enlace?: string;
+  leido: boolean;
+  creado: string;
+};
+
+export type FotoProgreso = { id: string; fecha: string; nota: string; imagen: string };
+export type Marca = { id: string; fecha: string; ejercicio: string; peso_kg: number; reps: number };
+
+export type Reto = {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  meta_entrenos: number;
+  desde: string;
+  hasta: string;
+};
+
+export type FilaRanking = { usuario_id: string; nombre: string; entrenos: number; es_yo: boolean };

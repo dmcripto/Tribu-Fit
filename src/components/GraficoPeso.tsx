@@ -1,6 +1,6 @@
 import type { Medida } from "@/lib/types";
 
-export default function GraficoPeso({ datos }: { datos: Medida[] }) {
+export default function GraficoPeso({ datos, etiqueta = "Peso", unidad = "kilos" }: { datos: Medida[]; etiqueta?: string; unidad?: string }) {
   if (datos.length < 2)
     return (
       <p className="text-sm text-zinc-500">
@@ -16,7 +16,7 @@ export default function GraficoPeso({ datos }: { datos: Medida[] }) {
   const pts = datos.map((d, i) => `${x(i)},${y(d.peso_kg)}`).join(" ");
   const ult = datos[datos.length - 1];
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Peso de ${datos[0].peso_kg} a ${ult.peso_kg} kilos`}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${etiqueta} de ${datos[0].peso_kg} a ${ult.peso_kg} ${unidad}`}>
       {[min, (min + max) / 2, max].map((g) => (
         <g key={g}>
           <line x1={L} x2={W - R} y1={y(g)} y2={y(g)} className="stroke-zinc-200 dark:stroke-zinc-800" />

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useTema, type Tema } from "@/lib/tema";
+import { useCliente } from "@/lib/store";
 import { useUsuario } from "@/components/AppShell";
 import CampoClave from "@/components/CampoClave";
 import Desplegable from "@/components/Desplegable";
@@ -50,10 +52,45 @@ function PermisosCuenta({ uid, rol }: { uid: string; rol: string }) {
       )}
       <label className="flex items-start gap-3 text-sm">
         <input type="checkbox" className="mt-1 size-5 accent-orange-600" checked={permisos.tribu} onChange={(e) => cambiar({ tribu: e.target.checked })} />
-        <span><b>Mi tribu puede ver mi racha y mis puntos.</b></span>
+        <span><b>Aparecer en el ranking de mi tribu.</b><br /><span className="text-zinc-500">Mostrará mi nombre y cuántos entrenos hice en 30 días a los demás alumnos de mi entrenador/a.</span></span>
       </label>
       <Aviso msg={msg} />
     </div>
+  );
+}
+
+function Preferencias() {
+  const [tema, setTema] = useTema();
+  const inicial = useCliente(() => (typeof Notification === "undefined" ? "no" : Notification.permission), "no");
+  const [nuevo, setPermiso] = useState<string | null>(null);
+  const permiso = nuevo ?? inicial;
+  async function activar() {
+    try { setPermiso(await Notification.requestPermission()); } catch { /* sin soporte */ }
+  }
+  return (
+    <section className="tarjeta flex flex-col gap-4">
+      <h2 className="subtitulo">Preferencias</h2>
+      <div>
+        <label className="etiqueta" htmlFor="tema">Tema</label>
+        <select id="tema" className="campo max-w-60" value={tema} onChange={(e) => setTema(e.target.value as Tema)}>
+          <option value="auto">Automático (como tu teléfono)</option>
+          <option value="claro">Claro</option>
+          <option value="oscuro">Oscuro</option>
+        </select>
+      </div>
+      <div className="flex flex-col items-start gap-2">
+        <span className="etiqueta !mb-0">Avisos en este dispositivo</span>
+        {permiso === "no" ? (
+          <p className="text-sm text-zinc-500">Este navegador no permite avisos del sistema. Tus avisos siguen en la campana 🔔.</p>
+        ) : permiso === "granted" ? (
+          <p className="text-sm text-green-700 dark:text-green-400">Activados: te avisaremos cuando llegue algo mientras la app esté abierta.</p>
+        ) : permiso === "denied" ? (
+          <p className="text-sm text-zinc-500">Los bloqueaste en el navegador. Puedes activarlos desde los ajustes del sitio.</p>
+        ) : (
+          <button type="button" className="btn-ghost" onClick={activar}>Activar avisos</button>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -106,6 +143,8 @@ export default function Cuenta() {
         <h1 className="titulo">Cuenta</h1>
         <p className="mt-2 text-sm text-zinc-500">{usuario.nombre} · {usuario.email}</p>
       </div>
+
+      <Preferencias />
 
       <section className="tarjeta flex flex-col gap-3">
         <h2 className="subtitulo">Permisos</h2>

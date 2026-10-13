@@ -46,13 +46,17 @@ export async function exportarDatos(usuario: Usuario): Promise<Record<string, un
       if (!data || data.length < 1000) return filas;
     }
   };
-  const [perfil, permisos, perfilEntrenamiento, medidas, entrenos, comidas, agua, pagos, planes, objetivo, cobro] = await Promise.all([
+  const colMensajes = usuario.rol === "entrenador" ? "entrenador_id" : "alumno_id";
+  const [perfil, permisos, perfilEntrenamiento, medidas, entrenos, comidas, agua, pagos, planes, objetivo, cobro, mensajes, avisos, fotos, marcas, retos] = await Promise.all([
     pedir("usuarios", "id"), pedir("consentimientos", "usuario_id"), pedir("perfiles_fitness", "alumno_id"), pedir("medidas", "usuario_id"),
     pedir("entrenos", "usuario_id"), pedir("comidas", "usuario_id"), pedir("agua", "usuario_id"),
     pedir("pagos", "alumno_id"), pedir("planes", "alumno_id"), pedir("nutricion_objetivos", "alumno_id"),
     usuario.rol === "entrenador" ? pedir("pago_config", "entrenador_id") : Promise.resolve([]),
+    pedir("mensajes", colMensajes).catch(() => []), pedir("avisos", "usuario_id").catch(() => []),
+    pedir("fotos_progreso", "usuario_id").catch(() => []), pedir("marcas", "usuario_id").catch(() => []),
+    usuario.rol === "entrenador" ? pedir("retos", "entrenador_id").catch(() => []) : Promise.resolve([]),
   ]);
-  return { ...base, datos: { perfil, permisos, perfil_entrenamiento: perfilEntrenamiento, medidas, entrenos, comidas, agua, pagos, planes, objetivo_nutricion: objetivo, cobro } };
+  return { ...base, datos: { perfil, permisos, perfil_entrenamiento: perfilEntrenamiento, medidas, entrenos, comidas, agua, pagos, planes, objetivo_nutricion: objetivo, cobro, mensajes, avisos, fotos_progreso: fotos, marcas, retos } };
 }
 
 /** Descarga un objeto como archivo JSON. */

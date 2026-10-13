@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import GraficoPeso from "@/components/GraficoPeso";
+import { FotosProgreso, MarcasEjercicio } from "@/components/ProgresoExtra";
 import { useMedidas } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 
@@ -45,7 +46,7 @@ export default function Medidas() {
 
   return (
     <main className="flex flex-col gap-6">
-      <h1 className="titulo">Medidas</h1>
+      <h1 className="titulo">Progreso</h1>
       <div className="grid gap-6 md:grid-cols-[1fr_1.4fr]">
         <form onSubmit={enviar} noValidate className="tarjeta flex flex-col gap-4">
           <h2 className="subtitulo">Nuevo registro</h2>
@@ -106,6 +107,8 @@ export default function Medidas() {
           )}
         </section>
       </div>
+      <MarcasEjercicio uid={usuario?.id ?? ""} />
+      <FotosProgreso uid={usuario?.id ?? ""} />
     </main>
   );
 }

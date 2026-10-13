@@ -10,6 +10,8 @@ import PremiumAviso from "@/components/PremiumAviso";
 import { useEntrenos, useMedidas, usePremium } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
 import { useLocal, useToday } from "@/lib/store";
+import { useRecordatorios } from "@/lib/recordatorios";
+import { useRecordatoriosLeidos } from "@/lib/comunidad";
 
 function Dato({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
@@ -59,6 +61,9 @@ export default function Panel() {
   const { medidas } = useMedidas(usuario?.id ?? "");
   const { entrenos } = useEntrenos(usuario?.id ?? "");
   const premium = usePremium(usuario);
+  const recordatorios = useRecordatorios(usuario);
+  const { leidos } = useRecordatoriosLeidos();
+  const paraHoy = recordatorios.filter((r) => !leidos.includes(r.id)).slice(0, 3);
 
   const orden = [...medidas].sort((a, b) => a.fecha.localeCompare(b.fecha));
   const ultima = orden[orden.length - 1];
@@ -84,6 +89,20 @@ export default function Panel() {
         </section>
       )}
       {usuario?.rol === "atleta" && <PremiumAviso estado={premium} mostrarActivo />}
+      {paraHoy.length > 0 && (
+        <section className="tarjeta flex flex-col gap-2" aria-label="Para hoy">
+          <h2 className="subtitulo">Para hoy</h2>
+          <ul className="flex flex-col gap-2 text-sm">
+            {paraHoy.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-3 border-t border-zinc-200 pt-2 first:border-0 first:pt-0 dark:border-zinc-800">
+                <span className={r.urgente ? "font-bold text-red-600" : ""}>{r.titulo}</span>
+                <Link href={r.enlace} className="shrink-0 font-bold text-orange-600">Abrir</Link>
+              </li>
+            ))}
+          </ul>
+          {recordatorios.length > paraHoy.length && <Link href="/avisos" className="text-sm text-zinc-500 underline">Ver todos</Link>}
+        </section>
+      )}
       {usuario?.rol === "entrenador" && (
         <p className="text-sm">
           <Link href="/entrenador" className="font-bold text-orange-600">Ir a Alumnos</Link>
@@ -120,7 +139,7 @@ export default function Panel() {
       {usuario?.rol === "atleta" && <PerfilEntrenamiento usuario={usuario} />}
       {!ultima && usuario?.rol === "atleta" && (
         <p className="text-sm text-zinc-500">
-          Registra tu primer peso en <Link href="/medidas" className="font-bold text-orange-600">Medidas</Link> para ver tu evolución.
+          Registra tu primer peso en <Link href="/medidas" className="font-bold text-orange-600">Progreso</Link> para ver tu evolución.
         </p>
       )}
     </main>

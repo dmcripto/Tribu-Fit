@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { buscarEjercicio } from "@/lib/ejercicios";
 import { useUsuario } from "@/components/AppShell";
 import {
   RUTINAS, formatoFecha, planTerminado, semanaActual, sumarDias, type Rutina,
@@ -126,7 +128,12 @@ export default function Rutinas() {
                         onChange={(e) => marcar(j, e.target.checked)}
                       />
                     </td>
-                    <td className="p-2">{x.nombre}</td>
+                    <td className="p-2">
+                      {x.nombre}
+                      {buscarEjercicio(x.nombre) && (
+                        <Link href={`/ejercicios#${buscarEjercicio(x.nombre)!.id}`} className="ml-2 text-xs font-bold text-orange-600 underline" aria-label={`Ver técnica de ${x.nombre}`}>técnica</Link>
+                      )}
+                    </td>
                     <td className="p-2">{x.series}</td>
                     <td className="p-2">{x.carga}</td>
                   </tr>
@@ -134,10 +141,11 @@ export default function Rutinas() {
               </tbody>
             </table>
           </div>
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
             <button type="button" className="btn-primary" onClick={terminar}>
               Terminar entreno
             </button>
+            <Link href={`/chat?tema=${encodeURIComponent(rutina.nombre)}`} className="btn-ghost">Comentar con mi entrenador/a</Link>
           </div>
           {aviso && <p role="status" className="text-sm text-green-700 dark:text-green-400">{aviso}</p>}
         </section>

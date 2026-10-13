@@ -19,7 +19,7 @@ import type {
 const db = () => supabase as SupabaseClient;
 
 /** Carga asíncrona con recarga manual. `cargar` debe ser estable (useCallback). */
-function useRemoto<T>(cargar: () => Promise<T>, inicial: T) {
+export function useRemoto<T>(cargar: () => Promise<T>, inicial: T) {
   const [data, setData] = useState<T>(inicial);
   const [n, setN] = useState(0);
   useEffect(() => {
@@ -319,7 +319,7 @@ const PERFILES_MUESTRA: Record<string, PerfilFitness> = {
   "ejemplo-ivan": { edad: 26, sexo: "hombre", altura_cm: 180, dias_semana: 5, lugar: "gimnasio", lesiones: "", restricciones: "" },
 };
 
-function muestra(hoy: string): Alumno[] {
+export function muestra(hoy: string): Alumno[] {
   if (!hoy) return [];
   const d = (n: number) => sumarDias(hoy, -n);
   const e = (n: number, rutina: string): Entreno => ({ fecha: d(n), rutina, hechos: 4, total: 4 });

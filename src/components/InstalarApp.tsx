@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCliente } from "@/lib/store";
 
 type EventoInstalar = Event & { prompt: () => Promise<void> };
 
 /** Botón "Instalar en este dispositivo": Android/Chrome (instalación directa) o instrucciones para iPhone. */
 export default function InstalarApp() {
   const [evento, setEvento] = useState<EventoInstalar | null>(null);
-  const [ios, setIos] = useState(false);
-  const [instalada, setInstalada] = useState(false);
+  const ios = useCliente(() => /iphone|ipad|ipod/i.test(navigator.userAgent), false);
+  const yaStandalone = useCliente(() => window.matchMedia("(display-mode: standalone)").matches, false);
+  const [recienInstalada, setInstalada] = useState(false);
+  const instalada = yaStandalone || recienInstalada;
 
   useEffect(() => {
-    setIos(/iphone|ipad|ipod/i.test(navigator.userAgent));
-    setInstalada(window.matchMedia("(display-mode: standalone)").matches);
     const alPrompt = (e: Event) => { e.preventDefault(); setEvento(e as EventoInstalar); };
     const alInstalar = () => setInstalada(true);
     window.addEventListener("beforeinstallprompt", alPrompt);

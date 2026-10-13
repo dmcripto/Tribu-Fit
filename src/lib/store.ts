@@ -64,3 +64,11 @@ export function useToday() {
     () => "",
   );
 }
+
+/**
+ * Lee un dato que solo existe en el navegador (hora, hash de la dirección, permisos…) sin romper
+ * la hidratación: en el servidor devuelve `servidor`. `leer` debe devolver un valor primitivo.
+ */
+export function useCliente<T extends string | number | boolean>(leer: () => T, servidor: T): T {
+  return useSyncExternalStore(() => () => {}, leer, () => servidor);
+}

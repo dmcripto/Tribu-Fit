@@ -73,7 +73,7 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`).
 
 ## App móvil (PWA y APK)
 
@@ -81,3 +81,14 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 - **APK Android** (`android/`): envoltorio WebView que abre `/ir`. Se compila sin Android Studio con `cd android && bash build-apk.sh` (descarga herramientas fijadas por SHA-256; crea `android/claves/` la primera vez).
   **Guarda `android/claves/` (git-ignorado): las actualizaciones deben firmarse con la misma clave.**
 - **Publicar una versión**: compilar y luego `node scripts/publicar-apk.mjs android/build/tribu-fit-X.Y.Z.apk <SHA256_certificado>`; copia el APK a `public/` y actualiza `src/lib/apk.json`. La web lo ofrece en `/descargar` y en la portada.
+
+## Comunidad y herramientas (migración 007)
+
+- **Chat** entrenador/a ↔ alumno (con tema opcional: una rutina o ejercicio). Solo dentro de la pareja vinculada; solo el destinatario puede marcar «leído».
+- **Avisos**: campana con contador. Los crean disparadores de la base (mensaje nuevo, plan nuevo, nutrición actualizada, pago por confirmar/resuelto). Además, «Para hoy» calcula recordatorios en el dispositivo (entreno, peso, comidas, cuota, retos). Notificaciones del navegador (opt‑in en Cuenta) solo con la app abierta: no hay *push* con la app cerrada (requeriría un servidor de notificaciones).
+- **Fotos de progreso** y **marcas por ejercicio** (1RM estimado y gráfico); la entrenadora las ve en la ficha solo si el alumno le dio permiso.
+- **Biblioteca de ejercicios** (`src/lib/ejercicios.ts`) enlazada desde las rutinas.
+- **Retos** de la entrenadora, **ranking** de la tribu (función `ranking_tribu`, solo quien activó «compartir con la tribu») e **insignias**.
+- **Recetas** (`src/lib/recetas.ts`): sugiere recetas según lo que le queda del día, respeta restricciones del perfil y ajusta la porción.
+- **Panel de la entrenadora**: resumen semanal y alertas (inactivos, sin peso, estancados, sin permiso, pago bloqueado).
+- **Tema** claro/oscuro/automático (Cuenta) y **deslizar** entre pestañas.
