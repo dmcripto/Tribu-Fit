@@ -92,3 +92,15 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 - **Recetas** (`src/lib/recetas.ts`): sugiere recetas según lo que le queda del día, respeta restricciones del perfil y ajusta la porción.
 - **Panel de la entrenadora**: resumen semanal y alertas (inactivos, sin peso, estancados, sin permiso, pago bloqueado).
 - **Tema** claro/oscuro/automático (Cuenta) y **deslizar** entre pestañas.
+
+## Cobro automático con Mercado Pago y bancos (migración 008)
+
+1. Ejecuta `supabase/migraciones/008_mercadopago_bancos.sql` en Supabase.
+2. En Vercel → Settings → Environment Variables añade (solo servidor): `SUPABASE_SERVICE_ROLE_KEY` y `MP_ENCRYPTION_KEY` (ver `.env.example`) y vuelve a desplegar.
+3. La entrenadora entra a **Pagos → Mi cobro → Cobro automático** y pega su *Access Token de producción* (Mercado Pago Developers → Tus integraciones → Credenciales de producción).
+
+Cómo funciona: el alumno toca «Pagar con Mercado Pago» → `POST /api/mp/pagar` crea una preferencia (Checkout Pro) **en la cuenta de su entrenadora** con `external_reference = tf:<alumno>` y `notification_url = /api/mp/webhook?c=<entrenadora>`. Mercado Pago avisa al webhook; el servidor **consulta el pago a Mercado Pago con el token de la entrenadora** (no se fía del aviso), comprueba alumno, monto y moneda, y registra un pago `confirmado` (+30 días, idempotente por `mp_payment_id`). Reembolsos/contracargos pasan el pago a `rechazado`.
+
+Seguridad: el token se cifra con AES‑256‑GCM (`src/lib/servidor/cripto.ts`) y se guarda en `mp_cuentas`, tabla sin acceso desde la app (solo la clave de servicio). Nunca vuelve al navegador. El webhook no valida la firma `x-signature` (cada entrenadora tiene su propia aplicación); la autenticidad se garantiza consultando el pago directamente.
+
+Bancos y billeteras: tabla `cuentas_bancarias` (banco, titular, alias, CBU/CVU con verificación del dígito, CUIT/CUIL). Los alumnos ven las cuentas de su entrenadora con botón de copiar.

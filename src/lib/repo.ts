@@ -624,6 +624,8 @@ type ApiPagos = {
   pagos: Pago[];
   registrar: (p: NuevoPago) => Promise<string | null>;
   resolver: (id: string, estado: "confirmado" | "rechazado", vence?: string) => Promise<string | null>;
+  /** Vuelve a pedir los pagos (por ejemplo, tras volver de Mercado Pago). */
+  recargar: () => void;
 };
 
 function pagosDeMuestra(hoy: string): Pago[] {
@@ -663,7 +665,7 @@ function usePagosLocal(yo: Usuario | null): ApiPagos {
     return null as string | null;
   }, [pagos, set]);
 
-  return { pagos, registrar, resolver };
+  return { pagos, registrar, resolver, recargar: () => {} };
 }
 
 type FilaPago = {
@@ -712,7 +714,7 @@ function usePagosRemoto(yo: Usuario | null): ApiPagos {
     return error ? error.message : null;
   }, [recargar]);
 
-  return { pagos, registrar, resolver };
+  return { pagos, registrar, resolver, recargar };
 }
 
 export const usePagos: (yo: Usuario | null) => ApiPagos = modoDemo ? usePagosLocal : usePagosRemoto;

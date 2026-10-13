@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import CampoTexto from "@/components/CampoTexto";
+import CobroMercadoPago from "@/components/CobroMercadoPago";
+import CuentasBancarias, { CuentasParaTransferir } from "@/components/CuentasBancarias";
 import Chip from "@/components/Chip";
 import Desplegable from "@/components/Desplegable";
 import Pestanas from "@/components/Pestanas";
@@ -15,7 +17,8 @@ import { imagenADataUrl } from "@/lib/imagen";
 import PremiumAviso from "@/components/PremiumAviso";
 import { useCartera, usePagoConfig, usePagos, usePremium } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
-import { useToday } from "@/lib/store";
+import { useCliente, useToday } from "@/lib/store";
+import { iniciarPagoMp, useMpEstado } from "@/lib/mp";
 import type { Metodo, Pago, PagoConfig, Usuario } from "@/lib/types";
 
 const MONEDAS = ["ARS", "USD", "EUR", "MXN", "COP", "PEN", "CLP", "BOB", "DOP", "UYU", "GTQ", "CRC", "PYG", "VES"];
@@ -62,7 +65,10 @@ function Aviso({ msg }: { msg: { ok: boolean; texto: string } | null }) {
 function VistaAlumno({ usuario }: { usuario: Usuario }) {
   const hoy = useToday();
   const { config } = usePagoConfig(usuario);
-  const { pagos, registrar } = usePagos(usuario);
+  const { pagos, registrar, recargar } = usePagos(usuario);
+  const [mp] = useMpEstado(usuario);
+  const retorno = useCliente(() => new URLSearchParams(window.location.search).get("mp") ?? "", "");
+  const [pagandoMp, setPagandoMp] = useState(false);
   const mios = pagos.filter((p) => p.alumno_id === usuario.id);
   const cuota = estadoCuota(mios, hoy);
   const premium = usePremium(usuario);
@@ -94,10 +100,28 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
     setFormKey((k) => k + 1);
   }
 
+  // Al volver de Mercado Pago, la confirmación llega en segundos: se consulta unas veces.
+  useEffect(() => {
+    if (retorno !== "ok" && retorno !== "pendiente") return;
+    let veces = 0;
+    const t = setInterval(() => { recargar(); if (++veces >= 10) clearInterval(t); }, 4000);
+    recargar();
+    return () => clearInterval(t);
+  }, [retorno, recargar]);
+
+  async function pagarConMp() {
+    setPagandoMp(true);
+    const r = await iniciarPagoMp();
+    if (r.url) { window.location.href = r.url; return; }
+    setPagandoMp(false);
+    setMsg({ ok: false, texto: r.error ?? "No se pudo iniciar el pago." });
+  }
+
   const sinVinculo = !modoDemo && !usuario.entrenadorId;
   const hayTarjeta = !!config && !!config.enlace && enlaceSeguro(config.enlace);
   const hayQr = !!config && esImagen(config.qr);
   const metodos = [
+    ...(mp.conectado ? [{ id: "mp", texto: "Mercado Pago" }] : []),
     ...(hayTarjeta ? [{ id: "tarjeta", texto: "Tarjeta" }] : []),
     ...(hayQr ? [{ id: "qr", texto: "QR" }] : []),
     { id: "otro", texto: "Transferencia o efectivo" },
@@ -114,6 +138,15 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
           {cuota.vence && <span className="text-zinc-500"> · cubierta hasta el {formatoFecha(cuota.vence)}</span>}
         </p>
       </div>
+
+      {(retorno === "ok" || retorno === "pendiente") && (
+        <p role="status" className="rounded-xl border border-green-600 bg-green-600/10 px-4 py-3 text-sm">
+          {retorno === "ok" ? "¡Gracias! Estamos confirmando tu pago. En unos segundos tu cuota se actualiza sola." : "Tu pago quedó pendiente en Mercado Pago. Apenas se acredite, tu cuota se renueva sola."}
+        </p>
+      )}
+      {retorno === "error" && (
+        <p role="alert" className="rounded-xl border border-red-600 bg-red-600/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">No se completó el pago. Puedes intentarlo de nuevo cuando quieras.</p>
+      )}
 
       <PremiumAviso estado={premium} mostrarActivo sinBoton />
 
@@ -137,6 +170,16 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
             </div>
             <Pestanas etiqueta="Cómo pagar" items={metodos} activa={metodoActivo} onCambia={setMetodoElegido} />
             <div role="tabpanel" className="flex flex-col items-start gap-3">
+              {metodoActivo === "mp" && (
+                <>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Pagas {dinero(config.precio, config.moneda)} con tarjeta de débito, crédito o dinero en tu cuenta de Mercado Pago. Apenas se acredita, tu cuota se renueva sola por 30 días. Tribu Fit nunca ve los datos de tu tarjeta.
+                  </p>
+                  <button type="button" className="btn-primary" onClick={pagarConMp} disabled={pagandoMp}>
+                    {pagandoMp ? "Abriendo Mercado Pago…" : "Pagar con Mercado Pago"}
+                  </button>
+                </>
+              )}
               {metodoActivo === "tarjeta" && (
                 <>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -152,9 +195,12 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
                 </>
               )}
               {metodoActivo === "otro" && (
-                <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
-                  {config.instrucciones || "Pregunta a tu entrenador/a cómo pagarle por transferencia o en efectivo."}
-                </p>
+                <>
+                  <CuentasParaTransferir usuario={usuario} />
+                  <p className="whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">
+                    {config.instrucciones || "Transfiere y luego avisa a tu entrenador/a abajo, en «Ya pagué». Si prefieres efectivo, pregúntale cómo."}
+                  </p>
+                </>
               )}
             </div>
           </section>
@@ -165,7 +211,7 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
                 <div>
                   <label className="etiqueta" htmlFor="p-metodo">Cómo pagaste</label>
                   <select className="campo" id="p-metodo" name="metodo" defaultValue="qr">
-                    {(Object.keys(METODOS) as Metodo[]).map((m) => <option key={m} value={m}>{METODOS[m]}</option>)}
+                    {(Object.keys(METODOS) as Metodo[]).filter((m) => m !== "mercadopago").map((m) => <option key={m} value={m}>{METODOS[m]}</option>)}
                   </select>
                 </div>
                 <div>
@@ -283,10 +329,10 @@ function FormCobro({
         </div>
       </div>
       <div>
-        <label className="etiqueta" htmlFor="cb-enlace">Enlace de pago con tarjeta (opcional)</label>
+        <label className="etiqueta" htmlFor="cb-enlace">Enlace de pago manual (opcional)</label>
         <CampoTexto id="cb-enlace" valor={enlace} onCambio={setEnlace} placeholder="https://mpago.la/..." autoComplete="off" />
         <p className="mt-1 text-xs text-zinc-500">
-          En Mercado Pago entra a «Cobrar» → «Link de pago», crea uno por el valor de tu cuota y pégalo aquí. El alumno paga con tarjeta de débito, crédito o dinero en cuenta en la página de Mercado Pago. Después tú confirmas el pago en esta pantalla.
+          Si no conectas el cobro automático, puedes crear un «Link de pago» en Mercado Pago («Cobrar» → «Link de pago») y pegarlo aquí. En ese caso tú confirmas cada pago a mano.
         </p>
       </div>
       <div className="flex flex-col gap-2">
@@ -486,7 +532,9 @@ function VistaEntrenador({ usuario }: { usuario: Usuario }) {
       )}
 
       {tab === "cobro" && (
-        <div role="tabpanel">
+        <div role="tabpanel" className="flex flex-col gap-5">
+          <CobroMercadoPago usuario={usuario} />
+          <CuentasBancarias usuario={usuario} />
           <FormCobro key={config ? "cargado" : "vacio"} inicial={config} guardar={guardarYQuedarse} msg={cobroMsg} setMsg={setCobroMsg} />
         </div>
       )}

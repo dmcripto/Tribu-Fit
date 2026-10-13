@@ -163,6 +163,7 @@ export const PAGOS_KEY = "tf_pagos";
 export const VACIO_PAGOS: Pago[] = [];
 
 export const METODOS: Record<Metodo, string> = {
+  mercadopago: "Mercado Pago",
   tarjeta: "Tarjeta de débito o crédito",
   qr: "QR",
   transferencia: "Transferencia",

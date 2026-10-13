@@ -59,7 +59,7 @@ export type Alumno = {
   ejemplo?: boolean;
 };
 
-export type Metodo = "tarjeta" | "qr" | "transferencia" | "efectivo";
+export type Metodo = "tarjeta" | "qr" | "transferencia" | "efectivo" | "mercadopago";
 export type EstadoPago = "pendiente" | "confirmado" | "rechazado";
 
 /** Cobro que configura la entrenadora. `enlace` es la página segura del proveedor de pagos. */
@@ -166,3 +166,13 @@ export type Reto = {
 };
 
 export type FilaRanking = { usuario_id: string; nombre: string; entrenos: number; es_yo: boolean };
+
+export type CuentaBancaria = {
+  id: string;
+  banco: string;
+  titular: string;
+  cbu?: string;
+  alias?: string;
+  documento: string;
+  nota: string;
+};
