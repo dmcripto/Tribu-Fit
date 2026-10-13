@@ -3,11 +3,18 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { useUsuario } from "@/components/AppShell";
+import Avatar from "@/components/Avatar";
 import Conversacion from "@/components/Conversacion";
+import { useAvataresAlumnos, useEntrenadorPerfil } from "@/lib/avatar";
 import { useHilos } from "@/lib/comunidad";
 import { useCartera } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
 import type { Usuario } from "@/lib/types";
+
+function ConversacionAlumno({ yo, contexto }: { yo: Usuario; contexto: string }) {
+  const coach = useEntrenadorPerfil(yo);
+  return <Conversacion yo={yo} alumnoId={yo.id} contextoInicial={contexto} titulo={coach?.nombre ?? "Tu entrenador/a"} avatar={coach?.avatar} />;
+}
 
 function VistaAlumno({ yo, contexto }: { yo: Usuario; contexto: string }) {
   const sinCoach = !modoDemo && !yo.entrenadorId;
@@ -18,12 +25,13 @@ function VistaAlumno({ yo, contexto }: { yo: Usuario; contexto: string }) {
       </p>
     );
   }
-  return <Conversacion yo={yo} alumnoId={yo.id} contextoInicial={contexto} titulo="Tu entrenador/a" />;
+  return <ConversacionAlumno yo={yo} contexto={contexto} />;
 }
 
 function VistaEntrenador({ yo, inicial }: { yo: Usuario; inicial: string }) {
   const { alumnos } = useCartera(yo);
   const hilos = useHilos(yo);
+  const avatares = useAvataresAlumnos(yo);
   const [sel, setSel] = useState<string | null>(inicial || null);
   const actual = alumnos.find((a) => a.id === sel);
   const hiloDe = (id: string) => hilos.find((h) => h.alumno_id === id);
@@ -32,7 +40,7 @@ function VistaEntrenador({ yo, inicial }: { yo: Usuario; inicial: string }) {
     return (
       <div className="flex flex-col gap-3">
         <button type="button" className="self-start text-sm font-bold text-orange-600" onClick={() => setSel(null)}>← Todas las conversaciones</button>
-        <Conversacion yo={yo} alumnoId={actual.id} titulo={actual.nombre} />
+        <Conversacion yo={yo} alumnoId={actual.id} titulo={actual.nombre} avatar={avatares[actual.id]} />
       </div>
     );
   }
@@ -47,7 +55,8 @@ function VistaEntrenador({ yo, inicial }: { yo: Usuario; inicial: string }) {
         return (
           <li key={a.id}>
             <button type="button" onClick={() => setSel(a.id)} className="tarjeta flex w-full items-center justify-between gap-3 text-left hover:border-orange-600">
-              <span className="min-w-0">
+              <Avatar nombre={a.nombre} src={avatares[a.id]} className="size-11 text-lg" />
+              <span className="min-w-0 flex-1">
                 <span className="block font-black">{a.nombre}</span>
                 <span className="block truncate text-sm text-zinc-500">{h ? h.ultimo.texto : "Sin mensajes todavía"}</span>
               </span>

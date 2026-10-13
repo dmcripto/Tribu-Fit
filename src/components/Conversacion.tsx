@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Avatar from "@/components/Avatar";
 import { useChat } from "@/lib/comunidad";
 import type { Usuario } from "@/lib/types";
 
@@ -11,8 +12,8 @@ const hora = (iso: string) => {
 
 /** Conversación entre un alumno y su entrenador/a. */
 export default function Conversacion({
-  yo, alumnoId, contextoInicial = "", titulo,
-}: { yo: Usuario; alumnoId: string; contextoInicial?: string; titulo: string }) {
+  yo, alumnoId, contextoInicial = "", titulo, avatar,
+}: { yo: Usuario; alumnoId: string; contextoInicial?: string; titulo: string; avatar?: string | null }) {
   const { mensajes, enviar, marcarLeidos } = useChat(yo, alumnoId);
   const esCoach = yo.rol === "entrenador";
   const [texto, setTexto] = useState("");
@@ -35,7 +36,10 @@ export default function Conversacion({
 
   return (
     <section className="tarjeta flex flex-col gap-3" aria-label={`Conversación con ${titulo}`}>
-      <h2 className="subtitulo">{titulo}</h2>
+      <div className="flex items-center gap-3">
+        <Avatar nombre={titulo} src={avatar} className="size-11 text-lg" />
+        <h2 className="subtitulo">{titulo}</h2>
+      </div>
       <ul className="flex max-h-[55vh] min-h-40 flex-col gap-2 overflow-y-auto py-1" aria-live="polite">
         {mensajes.length === 0 && <li className="text-sm text-zinc-500">Aún no hay mensajes. ¡Escribe el primero!</li>}
         {mensajes.map((m) => {

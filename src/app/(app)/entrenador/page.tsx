@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import AsignarNutricion from "@/components/AsignarNutricion";
+import Avatar from "@/components/Avatar";
+import { useAvataresAlumnos } from "@/lib/avatar";
 import AsignarPlan from "@/components/AsignarPlan";
 import Chip from "@/components/Chip";
 import GraficoPeso from "@/components/GraficoPeso";
@@ -90,6 +92,7 @@ export default function Entrenador() {
   const { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion, perfiles, propuestas, crearPropuesta } = cartera;
   useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador");
   const chequeos = useChequeos(usuario);
+  const avatares = useAvataresAlumnos(usuario);
   const { config } = usePagoConfig(usuario);
   const { pagos } = usePagos(usuario);
   const [sel, setSel] = useState<string | null>(null);
@@ -209,7 +212,10 @@ export default function Entrenador() {
                     className="tarjeta flex w-full flex-col gap-2 text-left hover:border-orange-600"
                   >
                     <span className="flex items-start justify-between gap-3">
-                      <span className="text-lg font-black">{a.nombre}</span>
+                      <span className="flex items-center gap-3">
+                        <Avatar nombre={a.nombre} src={avatares[a.id]} className="size-11 text-lg" />
+                        <span className="text-lg font-black">{a.nombre}</span>
+                      </span>
                       {a.permiso ? <Chip tono={ESTADO[estado].tono}>{ESTADO[estado].texto}</Chip> : <Chip tono="neutro">Sin permiso</Chip>}
                     </span>
                     <span className="text-sm text-zinc-500">
@@ -257,7 +263,10 @@ export default function Entrenador() {
         <button type="button" className="self-start text-sm font-bold text-orange-600" onClick={() => setSel(null)}>
           ← Todos los alumnos
         </button>
-        <h1 className="titulo">{actual.nombre}</h1>
+        <div className="flex items-center gap-4">
+          <Avatar nombre={actual.nombre} src={avatares[actual.id]} className="size-16 text-2xl" />
+          <h1 className="titulo">{actual.nombre}</h1>
+        </div>
         <p className="text-sm text-zinc-500">{actual.objetivo || "Sin objetivo indicado"}</p>
         <Link href={`/chat?alumno=${actual.id}`} className="btn-ghost w-fit">Escribirle</Link>
         <div className="flex flex-wrap gap-2">

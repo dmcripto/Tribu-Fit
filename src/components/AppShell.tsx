@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
+import Avatar from "@/components/Avatar";
 import Icono, { type NombreIcono } from "@/components/Iconos";
+import { useMiAvatar } from "@/lib/avatar";
 import { useAvisos, useHilos } from "@/lib/comunidad";
 import { salir, USER_KEY } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
@@ -50,6 +52,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const enlaces = usuario?.rol === "entrenador" ? enlacesEntrenador : enlacesAtleta;
   const pendientes = usePropuestasPendientes(usuario);
+  const { avatar } = useMiAvatar(usuario);
   const { avisos, noLeidos: avisosSinLeer } = useAvisos(usuario);
   const hilos = useHilos(usuario);
   const mensajesSinLeer = hilos.reduce((n, h) => n + h.noLeidos, 0);
@@ -142,8 +145,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               {avisosSinLeer > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] leading-4 text-white">{avisosSinLeer}</span>}
             </Link>
             <Link href="/cuenta" aria-label="Cuenta" aria-current={ruta === "/cuenta" ? "page" : undefined}
-              className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-red-600 text-base font-black text-white shadow-md shadow-orange-600/30">
-              <span aria-hidden="true">{usuario.nombre.trim().charAt(0).toUpperCase() || "?"}</span>
+              className="rounded-full shadow-md shadow-orange-600/30">
+              <Avatar nombre={usuario.nombre} src={avatar} />
               <span className="sr-only">Cuenta</span>
             </Link>
             <button

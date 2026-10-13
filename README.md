@@ -73,7 +73,7 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`, `010_chequeo_mensual.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`, `010_chequeo_mensual.sql`, `011_foto_perfil.sql`).
 
 ## App móvil (PWA y APK)
 
@@ -108,3 +108,7 @@ Bancos y billeteras: tabla `cuentas_bancarias` (banco, titular, alias, CBU/CVU c
 ## Chequeo mensual con fotos (migración 010)
 
 Cada 30 días el alumno sube 3 fotos (frente, perfil, espalda) en **Progreso**; la app compara con su primer chequeo («antes y después»), avisa cuando se acerca (25 días), toca (30) o vence (35) y la entrenadora ve el estado en las alertas, la lista de alumnos y la ficha (solo si el alumno dio permiso). Sin la migración 010 las fotos siguen funcionando, sin ángulo.
+
+## Foto de perfil (migración 011)
+
+Cada persona sube su foto en **Cuenta → Foto de perfil** (se reduce a 256 px). Se ve en el menú, la entrenadora la ve en la lista de alumnos, la ficha y el chat, y el alumno ve la de su entrenadora en el chat (función `mi_entrenador`). Sin la migración 011 todo sigue funcionando con la inicial del nombre.

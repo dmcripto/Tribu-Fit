@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Avatar from "@/components/Avatar";
+import { useMiAvatar } from "@/lib/avatar";
+import { imagenADataUrl } from "@/lib/imagen";
 import { useTema, type Tema } from "@/lib/tema";
 import { useCliente } from "@/lib/store";
 import { useUsuario } from "@/components/AppShell";
@@ -11,6 +14,7 @@ import Desplegable from "@/components/Desplegable";
 import { cambiarClave } from "@/lib/auth";
 import { descargarJson, eliminarCuenta, exportarDatos, guardarPermisos, leerPermisos, type Permisos } from "@/lib/cuenta";
 import { modoDemo } from "@/lib/supabase";
+import type { Usuario } from "@/lib/types";
 
 type Mensaje = { ok: boolean; texto: string } | null;
 
@@ -56,6 +60,49 @@ function PermisosCuenta({ uid, rol }: { uid: string; rol: string }) {
       </label>
       <Aviso msg={msg} />
     </div>
+  );
+}
+
+function FotoPerfil({ usuario }: { usuario: Usuario }) {
+  const { avatar, guardar } = useMiAvatar(usuario);
+  const [msg, setMsg] = useState<Mensaje>(null);
+  const [ocupado, setOcupado] = useState(false);
+  async function subir(e: React.ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    const campo = e.target;
+    if (!archivo) return;
+    setOcupado(true);
+    const r = await imagenADataUrl(archivo, { lado: 256 });
+    if (!r.url) setMsg({ ok: false, texto: r.error ?? "No se pudo leer la imagen." });
+    else {
+      const fallo = await guardar(r.url);
+      setMsg(fallo ? { ok: false, texto: fallo } : { ok: true, texto: "Foto de perfil actualizada." });
+    }
+    setOcupado(false);
+    campo.value = "";
+  }
+  async function quitar() {
+    const fallo = await guardar(null);
+    setMsg(fallo ? { ok: false, texto: fallo } : { ok: true, texto: "Quitaste tu foto de perfil." });
+  }
+  return (
+    <section className="tarjeta flex flex-col gap-4" aria-label="Foto de perfil">
+      <h2 className="subtitulo">Foto de perfil</h2>
+      <div className="flex flex-wrap items-center gap-4">
+        <Avatar nombre={usuario.nombre} src={avatar} className="size-24 text-4xl" />
+        <div className="flex flex-col items-start gap-2">
+          <label className="btn-primary cursor-pointer" aria-disabled={ocupado}>
+            {ocupado ? "Guardando…" : avatar ? "Cambiar foto" : "Subir foto"}
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" aria-label="Elegir foto de perfil" onChange={subir} disabled={ocupado} />
+          </label>
+          {avatar && <button type="button" className="text-sm font-bold text-red-600 underline" onClick={quitar}>Quitar foto</button>}
+        </div>
+      </div>
+      <p className="text-xs text-zinc-500">
+        {usuario.rol === "entrenador" ? "La ven tus alumnos en el chat." : "La ve tu entrenador/a en tu ficha y en el chat."}
+      </p>
+      <Aviso msg={msg} />
+    </section>
   );
 }
 
@@ -143,6 +190,8 @@ export default function Cuenta() {
         <h1 className="titulo">Cuenta</h1>
         <p className="mt-2 text-sm text-zinc-500">{usuario.nombre} · {usuario.email}</p>
       </div>
+
+      <FotoPerfil usuario={usuario} />
 
       <Preferencias />
 
