@@ -1,0 +1,27 @@
+KIT DE PROMOCIÓN · TRIBU FIT
+Todos los QR llevan a https://tribu-fit.vercel.app/app (descarga de la app). Probados con un lector: abren el enlace correcto.
+
+REMERAS  (remeras/)  — 30 x 40 cm, 300 dpi, fondo transparente
+  frente-logo-para-prenda-claro/oscuro.png    Logo grande + "ENTRENÁ EN TRIBU". Texto oscuro para prendas CLARAS, blanco para OSCURAS.
+  frente-frase-para-prenda-claro/oscuro.png   "NO ENTRENÁS SOLO." solo tipografía.
+  espalda-qr-cualquier-prenda.png             Tarjeta blanca con el QR: se lee sobre cualquier color. Ideal para la espalda.
+  Combinación sugerida: FRENTE con logo (pecho, 10-12 cm) + ESPALDA con el QR.
+  IMPORTANTE: el logo original que tengo es de 512 px. Impreso a más de ~8 cm puede verse algo suave. Para la tanda final, pasale a la estampería el archivo original del logo en alta resolución o vectorial (y avisame para rehacer los diseños con ese archivo).
+
+REDES  (redes/)
+  post-cuadrado-1080x1080.png   Feed Instagram/Facebook
+  post-vertical-1080x1350.png   Feed vertical (mejor alcance)
+  story-1080x1920.png           Stories / estados de WhatsApp / Reels (portada)
+  textos-redes.txt              Textos y hashtags para copiar y pegar
+
+IMPRESOS  (impresos/)
+  flyer-A5.pdf / .png           148 x 210 mm, 300 dpi
+  afiche-A3.pdf / .png          297 x 420 mm, 300 dpi (para el gimnasio, vidriera, plaza)
+  sticker-redondo-logo-6cm.png  Sticker circular 6 cm
+  sticker-redondo-qr-6cm.png    Sticker circular 6 cm con QR
+  tarjeta-ejemplo*.png          EJEMPLO de tarjeta personal (90 x 50 mm). La tarjeta real, con TU nombre y TU código,
+                                se descarga desde la app: Alumnos > Tu código > "Descargar mi tarjeta".
+                                Su QR abre el registro con tu código ya escrito.
+
+Consejos: imprimir una prueba y escanearla con 2 o 3 celulares antes de la tanda; no estirar ni deformar los diseños; tamaño mínimo del QR 4 x 4 cm.
+Para regenerar todo (otra dirección o textos): node scripts/qr/matriz.mjs <url> && python3 scripts/promo/generar.py

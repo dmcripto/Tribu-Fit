@@ -7,6 +7,7 @@ import { useState } from "react";
 import CampoClave from "@/components/CampoClave";
 import CampoTexto from "@/components/CampoTexto";
 import { registrar, rutaInicial } from "@/lib/auth";
+import { useCliente } from "@/lib/store";
 import { modoDemo } from "@/lib/supabase";
 
 const objetivos = ["Perder grasa", "Ganar músculo", "Correr más", "Estar activo"];
@@ -17,6 +18,11 @@ export default function Registro() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [rol, setRol] = useState<"atleta" | "entrenador">("atleta");
+  // Si llegas desde la tarjeta o el enlace de tu entrenador/a (?codigo=ABC123), el código ya viene escrito.
+  const codigoUrl = useCliente(() => {
+    const c = new URLSearchParams(window.location.search).get("codigo") ?? "";
+    return /^[A-Za-z0-9]{4,12}$/.test(c) ? c.toUpperCase() : "";
+  }, "");
 
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -97,7 +103,7 @@ export default function Registro() {
         {rol === "atleta" && (
           <div>
             <label className="etiqueta" htmlFor="codigoEntrenador">Código de tu entrenador/a (opcional)</label>
-            <CampoTexto className="uppercase" id="codigoEntrenador" name="codigoEntrenador" placeholder="ABC123" autoComplete="off" />
+            <CampoTexto key={codigoUrl} inicial={codigoUrl} className="uppercase" id="codigoEntrenador" name="codigoEntrenador" placeholder="ABC123" autoComplete="off" />
           </div>
         )}
         <fieldset>

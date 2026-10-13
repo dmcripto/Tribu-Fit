@@ -17,6 +17,7 @@ import Link from "next/link";
 import { datosParaMotor, useAutoPropuestas, useCartera, usePagoConfig, usePagos } from "@/lib/repo";
 import { generarNutricion, generarPlan } from "@/lib/motor";
 import { useToday } from "@/lib/store";
+import { codigoValido, crearTarjeta, descargarBlob, enlaceInvitacion } from "@/lib/tarjeta";
 import type { Alumno, PremiumModo } from "@/lib/types";
 
 const ESTADO: Record<Estado, { texto: string; tono: "ok" | "aviso" | "mal" }> = {
@@ -27,30 +28,56 @@ const ESTADO: Record<Estado, { texto: string; tono: "ok" | "aviso" | "mal" }> = 
 const ORDEN: Record<Estado, number> = { riesgo: 0, revisar: 1, al_dia: 2 };
 const coma = (n: number) => n.toFixed(1).replace(".", ",");
 
-function CodigoInvitacion({ codigo }: { codigo?: string }) {
-  const [copiado, setCopiado] = useState(false);
-  async function copiar() {
-    if (!codigo) return;
+function CodigoInvitacion({ codigo, nombre }: { codigo?: string; nombre: string }) {
+  const [copiado, setCopiado] = useState<"" | "codigo" | "enlace">("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [haciendo, setHaciendo] = useState(false);
+  const valido = !!codigo && codigoValido(codigo);
+  async function copiar(texto: string, que: "codigo" | "enlace") {
     try {
-      await navigator.clipboard.writeText(codigo);
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
+      await navigator.clipboard.writeText(texto);
+      setCopiado(que);
+      setTimeout(() => setCopiado(""), 2000);
     } catch {
       /* si el navegador no deja copiar, el código sigue visible para copiarlo a mano */
     }
   }
+  async function tarjeta() {
+    if (!valido) return;
+    setHaciendo(true);
+    setMsg(null);
+    try {
+      descargarBlob(`tarjeta-tribu-fit-${codigo}.png`, await crearTarjeta(nombre, codigo!));
+      setMsg("Listo: se descargó tu tarjeta (frente y dorso) lista para imprimir. El QR abre el registro con tu código ya escrito.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "No se pudo crear la tarjeta.");
+    }
+    setHaciendo(false);
+  }
   return (
-    <section className="tarjeta flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 className="subtitulo">Tu código</h2>
-        <p className="text-sm text-zinc-500">Pásaselo a tus alumnos para que se vinculen contigo.</p>
+    <section className="tarjeta flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="subtitulo">Tu código</h2>
+          <p className="text-sm text-zinc-500">Pásaselo a tus alumnos para que se vinculen contigo.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="rounded-md border-2 border-orange-600 px-3 py-1.5 font-mono text-xl font-bold tracking-widest" aria-label="Código de invitación">
+            {codigo ?? "—"}
+          </span>
+          <button type="button" className="btn-ghost" onClick={() => codigo && copiar(codigo, "codigo")}>{copiado === "codigo" ? "Copiado" : "Copiar"}</button>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="rounded-md border-2 border-orange-600 px-3 py-1.5 font-mono text-xl font-bold tracking-widest" aria-label="Código de invitación">
-          {codigo ?? "—"}
-        </span>
-        <button type="button" className="btn-ghost" onClick={copiar}>{copiado ? "Copiado" : "Copiar"}</button>
-      </div>
+      {valido && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--borde)] pt-4">
+          <button type="button" className="btn-ghost" onClick={() => copiar(enlaceInvitacion(codigo!), "enlace")}>
+            {copiado === "enlace" ? "Enlace copiado" : "Copiar enlace de invitación"}
+          </button>
+          <button type="button" className="btn-primary" onClick={tarjeta} disabled={haciendo}>{haciendo ? "Creando…" : "Descargar mi tarjeta"}</button>
+          <p className="w-full text-xs text-zinc-500">El enlace abre el registro con tu código ya escrito: ideal para mandar por WhatsApp. La tarjeta lleva tu nombre, tu código y un QR.</p>
+        </div>
+      )}
+      {msg && <p role="status" className="text-sm text-green-700 dark:text-green-400">{msg}</p>}
     </section>
   );
 }
@@ -122,7 +149,7 @@ export default function Entrenador() {
           </p>
         </div>
 
-        <CodigoInvitacion codigo={usuario.codigo} />
+        <CodigoInvitacion codigo={usuario.codigo} nombre={usuario.nombre} />
 
         {alumnos.length > 0 && (() => {
           const bloqueados = new Set(config === null ? [] : filas.filter((f) => !f.premium.activo).map((f) => f.a.id));
