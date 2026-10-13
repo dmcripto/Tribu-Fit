@@ -1,4 +1,4 @@
-import type { Entreno, Medida } from "./types";
+import type { Comida, Entreno, Medida, ObjetivoNutricion } from "./types";
 
 export const MEDIDAS_KEY = "tf_medidas";
 export const ENTRENOS_KEY = "tf_entrenos";
@@ -110,4 +110,48 @@ export function estadoAlumno(entrenos: Entreno[], hoy: string) {
   const estado: Estado =
     desde === null || desde > 7 ? "riesgo" : desde >= 4 ? "revisar" : "al_dia";
   return { estado, ultimo, desde };
+}
+
+/* ---------- Nutrición ---------- */
+
+export const COMIDAS_KEY = "tf_comidas";
+export const AGUA_KEY = "tf_agua";
+export const NUTRI_KEY = "tf_nutricion";
+export const VACIO_COMIDAS: Comida[] = [];
+export const VACIO_AGUA: Record<string, number> = {};
+export const VACIO_NUTRI: Record<string, ObjetivoNutricion> = {};
+
+/** Estimación orientativa a partir del peso y el objetivo. No sustituye un plan profesional. */
+export function estimarObjetivo(peso: number | undefined, objetivo: string): ObjetivoNutricion {
+  const kg = peso && peso > 30 ? peso : 70;
+  const o = objetivo.toLowerCase();
+  const musculo = o.includes("músculo") || o.includes("musculo");
+  let kcal = kg * 30;
+  if (o.includes("grasa")) kcal -= 400;
+  else if (musculo) kcal += 300;
+  kcal = Math.round(kcal / 50) * 50;
+  const proteina = Math.round(kg * (musculo ? 2 : 1.8));
+  const grasas = Math.round(kg * 0.9);
+  const carbos = Math.max(0, Math.round((kcal - proteina * 4 - grasas * 9) / 4));
+  return { kcal, proteina, carbos, grasas, agua: 8, notas: "" };
+}
+
+export function totalesDia(comidas: Comida[], fecha: string) {
+  const del = comidas.filter((c) => c.fecha === fecha);
+  const suma = (k: "kcal" | "proteina" | "carbos" | "grasas") => del.reduce((s, c) => s + c[k], 0);
+  return { kcal: suma("kcal"), proteina: suma("proteina"), carbos: suma("carbos"), grasas: suma("grasas") };
+}
+
+/** Media diaria de los últimos `ventana` días en los que registró comidas. */
+export function promedioNutricion(comidas: Comida[], hoy: string, ventana = 7) {
+  if (!hoy) return null;
+  const dentro = comidas.filter((c) => dias(hoy, c.fecha) >= 0 && dias(hoy, c.fecha) < ventana);
+  const fechas = [...new Set(dentro.map((c) => c.fecha))];
+  if (fechas.length === 0) return null;
+  const total = (k: "kcal" | "proteina") => dentro.reduce((s, c) => s + c[k], 0);
+  return {
+    dias: fechas.length,
+    kcal: Math.round(total("kcal") / fechas.length),
+    proteina: Math.round(total("proteina") / fechas.length),
+  };
 }

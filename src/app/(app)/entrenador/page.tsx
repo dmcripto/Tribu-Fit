@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
+import AsignarNutricion from "@/components/AsignarNutricion";
+import AsignarPlan from "@/components/AsignarPlan";
 import GraficoPeso from "@/components/GraficoPeso";
 import {
-  RUTINAS, estadoAlumno, formatoFecha, semanaActual, entrenosSemana, planTerminado,
+  estadoAlumno, formatoFecha, semanaActual, entrenosSemana, planTerminado, promedioNutricion,
   type Estado, type Plan,
 } from "@/lib/datos";
-import { useCartera, type NuevoPlan } from "@/lib/repo";
+import { useCartera } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
 import { useToday } from "@/lib/store";
-import type { Alumno } from "@/lib/types";
 
 const ETIQUETA: Record<Estado, { texto: string; clase: string }> = {
   al_dia: { texto: "Al día", clase: "text-green-700 dark:text-green-400" },
@@ -20,98 +21,10 @@ const ETIQUETA: Record<Estado, { texto: string; clase: string }> = {
 
 const coma = (n: number) => n.toFixed(1).replace(".", ",");
 
-function AsignarPlan({
-  alumno, hoy, asignar,
-}: { alumno: Alumno; hoy: string; asignar: (p: NuevoPlan) => Promise<string | null> }) {
-  const [nombre, setNombre] = useState("Plan de 4 semanas");
-  const [semanas, setSemanas] = useState(4);
-  const [inicio, setInicio] = useState(hoy);
-  const [quitadas, setQuitadas] = useState<string[]>([]);
-  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
-  const [enviando, setEnviando] = useState(false);
-
-  function alternar(clave: string) {
-    setQuitadas((q) => (q.includes(clave) ? q.filter((k) => k !== clave) : [...q, clave]));
-  }
-
-  async function enviar(e: React.FormEvent) {
-    e.preventDefault();
-    const fecha = inicio || hoy;
-    const lista = Array.from({ length: semanas }, (_, i) => ({
-      semana: i + 1,
-      rutinas: RUTINAS.filter((_, j) => !quitadas.includes(`${i + 1}-${j}`)),
-    }));
-    if (!nombre.trim()) return setMsg({ ok: false, texto: "Ponle un nombre al plan." });
-    const vacia = lista.find((s) => s.rutinas.length === 0);
-    if (vacia) return setMsg({ ok: false, texto: `La semana ${vacia.semana} no tiene ninguna rutina.` });
-    setEnviando(true);
-    const fallo = await asignar({ alumno_id: alumno.id, nombre: nombre.trim(), fecha_inicio: fecha, semanas: lista });
-    setEnviando(false);
-    setMsg(
-      fallo
-        ? { ok: false, texto: fallo }
-        : { ok: true, texto: `Plan asignado. La semana 1 se libera el ${formatoFecha(fecha)} y el resto una por semana.` },
-    );
-  }
-
-  return (
-    <form onSubmit={enviar} className="flex flex-col gap-4">
-      <h3 className="text-xl font-black uppercase">Asignar plan</h3>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="sm:col-span-1">
-          <label className="etiqueta" htmlFor="plan-nombre">Nombre</label>
-          <input className="campo" id="plan-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        </div>
-        <div>
-          <label className="etiqueta" htmlFor="plan-semanas">Duración</label>
-          <select className="campo" id="plan-semanas" value={semanas} onChange={(e) => setSemanas(Number(e.target.value))}>
-            <option value={1}>1 semana</option>
-            <option value={2}>2 semanas</option>
-            <option value={4}>4 semanas (mensual)</option>
-            <option value={8}>8 semanas</option>
-          </select>
-        </div>
-        <div>
-          <label className="etiqueta" htmlFor="plan-inicio">Empieza el</label>
-          <input className="campo" id="plan-inicio" type="date" value={inicio} min={hoy} onChange={(e) => setInicio(e.target.value)} />
-        </div>
-      </div>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="etiqueta">Rutinas de cada semana</legend>
-        {Array.from({ length: semanas }, (_, i) => (
-          <div key={i} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-zinc-200 pt-2 text-sm dark:border-zinc-800">
-            <span className="w-20 font-mono text-xs uppercase text-zinc-500">Semana {i + 1}</span>
-            {RUTINAS.map((r, j) => {
-              const clave = `${i + 1}-${j}`;
-              return (
-                <label key={clave} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="accent-orange-600"
-                    checked={!quitadas.includes(clave)}
-                    onChange={() => alternar(clave)}
-                  />
-                  {r.nombre.split(" · ")[0]}
-                </label>
-              );
-            })}
-          </div>
-        ))}
-      </fieldset>
-      {msg && (
-        <p role={msg.ok ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-green-700 dark:text-green-400" : "text-red-600"}`}>
-          {msg.texto}
-        </p>
-      )}
-      <div><button className="btn-primary" disabled={enviando}>{enviando ? "Asignando..." : `Asignar a ${alumno.nombre.split(" ")[0]}`}</button></div>
-    </form>
-  );
-}
-
 export default function Entrenador() {
   const usuario = useUsuario();
   const hoy = useToday();
-  const { alumnos, planes, asignar } = useCartera(usuario);
+  const { alumnos, planes, objetivos, asignar, asignarNutricion } = useCartera(usuario);
   const [sel, setSel] = useState<string | null>(null);
 
   if (usuario?.rol !== "entrenador") {
@@ -233,6 +146,20 @@ export default function Entrenador() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
+                    <h3 className="text-xl font-black uppercase">Nutrición (últimos 7 días)</h3>
+                    {(() => {
+                      const prom = promedioNutricion(actual.comidas, hoy);
+                      const meta = objetivos[actual.id];
+                      if (!prom) return <p className="text-sm text-zinc-500">Aún no ha registrado comidas.</p>;
+                      return (
+                        <p className="text-sm">
+                          Media de <b>{prom.kcal} kcal</b> y <b>{prom.proteina} g</b> de proteína al día, en {prom.dias} {prom.dias === 1 ? "día registrado" : "días registrados"}
+                          {meta ? ` (objetivo: ${meta.kcal} kcal y ${meta.proteina} g)` : " (sin objetivo personalizado)"}.
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  <div className="flex flex-col gap-2">
                     <h3 className="text-xl font-black uppercase">Planes asignados</h3>
                     {planesActual.length === 0 ? (
                       <p className="text-sm text-zinc-500">Todavía no le has asignado ningún plan.</p>
@@ -255,8 +182,9 @@ export default function Entrenador() {
                   </div>
                 </>
               )}
-              {/* key: reinicia el formulario al cambiar de alumno */}
-              <AsignarPlan key={actual.id} alumno={actual} hoy={hoy} asignar={asignar} />
+              {/* key: reinicia los formularios al cambiar de alumno */}
+              <AsignarPlan key={`plan-${actual.id}`} alumno={actual} hoy={hoy} asignar={asignar} />
+              <AsignarNutricion key={`nutri-${actual.id}`} alumno={actual} actual={objetivos[actual.id]} asignar={asignarNutricion} />
             </section>
           )}
         </>

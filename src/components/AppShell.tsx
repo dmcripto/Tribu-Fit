@@ -11,6 +11,7 @@ import type { Usuario } from "@/lib/types";
 const enlacesAtleta = [
   { href: "/panel", texto: "Panel" },
   { href: "/rutinas", texto: "Rutinas" },
+  { href: "/nutricion", texto: "Nutrición" },
   { href: "/medidas", texto: "Medidas" },
 ];
 const enlacesEntrenador = [

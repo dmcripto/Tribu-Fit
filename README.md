@@ -33,11 +33,18 @@ Para usar Supabase:
 
 ## Pantallas
 
-`/registro`, `/login`, `/panel`, `/rutinas`, `/medidas` y `/entrenador` (solo cuentas de entrenador/a).
+`/registro`, `/login`, `/panel`, `/rutinas`, `/nutricion`, `/medidas` y `/entrenador` (solo cuentas de entrenador/a).
 
 ## Entrenador/a y alumnos
 
 - Al registrarse como entrenador/a se genera un código de invitación.
 - El alumno lo escribe al registrarse (o en su Panel) y queda vinculado.
 - La entrenadora ve peso, entrenos y estado (al día / revisar / en riesgo) de los alumnos vinculados que marcaron el permiso de compartir con su entrenador.
+- Personaliza las rutinas de cada alumno: edita ejercicios, series y cargas, o crea rutinas propias, y elige cuáles tocan cada semana.
+- Fija el objetivo de nutrición de cada alumno (calorías, macros, agua y notas). Sin objetivo, el alumno ve una estimación orientativa según su peso y objetivo.
+- Ve la media de calorías y proteína que registra cada alumno.
 - Asigna planes de 1, 2, 4 u 8 semanas. La semana N se libera N-1 semanas después del inicio, tanto en la interfaz como en la base de datos.
+
+## Migraciones de base de datos
+
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` (por ejemplo `002_nutricion.sql`).

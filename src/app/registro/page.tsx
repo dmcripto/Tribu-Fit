@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CampoClave from "@/components/CampoClave";
+import CampoTexto from "@/components/CampoTexto";
 import { registrar } from "@/lib/auth";
 import { modoDemo } from "@/lib/supabase";
 
@@ -80,11 +81,11 @@ export default function Registro() {
         </fieldset>
         <div>
           <label className="etiqueta" htmlFor="nombre">Nombre</label>
-          <input className="campo" id="nombre" name="nombre" autoComplete="name" />
+          <CampoTexto id="nombre" name="nombre" autoComplete="name" />
         </div>
         <div>
           <label className="etiqueta" htmlFor="email">Correo</label>
-          <input className="campo" id="email" name="email" type="email" autoComplete="email" />
+          <CampoTexto id="email" name="email" type="email" autoComplete="email" />
         </div>
         <div>
           <label className="etiqueta" htmlFor="password">Contraseña</label>
@@ -93,7 +94,7 @@ export default function Registro() {
         {rol === "atleta" && (
           <div>
             <label className="etiqueta" htmlFor="codigoEntrenador">Código de tu entrenador/a (opcional)</label>
-            <input className="campo uppercase" id="codigoEntrenador" name="codigoEntrenador" placeholder="ABC123" autoComplete="off" />
+            <CampoTexto className="uppercase" id="codigoEntrenador" name="codigoEntrenador" placeholder="ABC123" autoComplete="off" />
           </div>
         )}
         <fieldset>

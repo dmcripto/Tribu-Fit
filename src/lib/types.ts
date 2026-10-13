@@ -26,6 +26,26 @@ export type Entreno = {
   total: number;
 };
 
+export type Comida = {
+  id: string;
+  fecha: string;
+  nombre: string;
+  kcal: number;
+  proteina: number;
+  carbos: number;
+  grasas: number;
+};
+
+/** Objetivo diario de nutrición (gramos de cada macro, vasos de agua). */
+export type ObjetivoNutricion = {
+  kcal: number;
+  proteina: number;
+  carbos: number;
+  grasas: number;
+  agua: number;
+  notas: string;
+};
+
 export type Alumno = {
   id: string;
   nombre: string;
@@ -34,5 +54,6 @@ export type Alumno = {
   permiso: boolean;
   medidas: Medida[];
   entrenos: Entreno[];
+  comidas: Comida[];
   ejemplo?: boolean;
 };

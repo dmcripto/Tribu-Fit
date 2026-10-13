@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CampoClave from "@/components/CampoClave";
+import CampoTexto from "@/components/CampoTexto";
 import { entrar } from "@/lib/auth";
 
 export default function Login() {
@@ -35,7 +36,7 @@ export default function Login() {
       <form onSubmit={enviar} noValidate className="flex flex-col gap-4">
         <div>
           <label className="etiqueta" htmlFor="email">Correo</label>
-          <input className="campo" id="email" name="email" type="email" autoComplete="email" />
+          <CampoTexto id="email" name="email" type="email" autoComplete="email" />
         </div>
         <div>
           <label className="etiqueta" htmlFor="password">Contraseña</label>
