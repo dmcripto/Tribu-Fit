@@ -96,7 +96,7 @@ export default function Home() {
             <li key={p.n} className="tarjeta relative overflow-hidden">
               <span aria-hidden="true" className="acento absolute -right-1 -top-4 text-8xl font-black opacity-30">{p.n}</span>
               <h3 className="relative text-lg font-black">{p.titulo}</h3>
-              <p className="relative mt-1 text-sm text-zinc-600 dark:text-zinc-400">{p.texto}</p>
+              <p className="relative mt-1 pr-12 text-sm text-zinc-600 dark:text-zinc-400">{p.texto}</p>
             </li>
           ))}
         </ol>
