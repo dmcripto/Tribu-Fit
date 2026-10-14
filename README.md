@@ -73,7 +73,7 @@ El motor (`src/lib/motor.ts`) usa reglas explicables, sin IA: objetivo y nivel, 
 
 ## Migraciones de base de datos
 
-`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`, `010_chequeo_mensual.sql`, `011_foto_perfil.sql`).
+`supabase/schema.sql` crea todo desde cero. Si ya ejecutaste una versión anterior, ejecuta solo las migraciones nuevas de `supabase/migraciones/` en orden (`002_nutricion.sql`, `003_pagos.sql`, `004_premium.sql`, `005_cuenta_legal.sql`, `006_propuestas.sql`, `007_comunidad.sql`, `008_mercadopago_bancos.sql`, `009_aviso_cuentas.sql`, `010_chequeo_mensual.sql`, `011_foto_perfil.sql`, `012_salud_y_pesos.sql`).
 
 ## App móvil (PWA y APK)
 
@@ -116,3 +116,9 @@ Cada persona sube su foto en **Cuenta → Foto de perfil** (se reduce a 256 px).
 ## Revisar la configuración
 
 `/api/salud` devuelve solo sí/no (sin claves) con el estado de las variables de entorno y de las tablas/columnas de las migraciones 007–011. Debe mostrar `"ok":true`. Guía completa para cargar las variables en Vercel: ver `out/` no versionado; las variables están descritas en `.env.example`.
+
+## Salud en la comida, pesos por serie y resumen de 90 días (migración 012)
+
+- **Salud y alimentación** (Inicio): el alumno marca condiciones (diabetes, hipertensión, celiaquía, intolerancia a la lactosa, alergia a frutos secos o al huevo, colesterol alto, embarazo/lactancia) y un detalle libre. Se guardan en `condiciones_salud` (solo las ve la entrenadora si hay permiso). Las **recetas** ocultan lo que no corresponde (`aptaParaSalud` en `src/lib/recetas.ts`), el motor de propuestas añade avisos y notas, y la ficha del alumno las muestra. No cambia calorías por su cuenta.
+- **Pesos por serie** (Rutinas): cada ejercicio muestra sus series; kilos y repeticiones se guardan solos al salir de la casilla (una fila de `marcas` con `serie`, corregible sin duplicar). Muestra la «última vez» y la diferencia (▲ +10 kg).
+- **Resumen de 90 días** (Progreso y ficha del alumno): tabla del mejor peso de cada ejercicio en las semanas 1, 4, 8 y 12, cambio, entrenos hechos, peso corporal y fuerza promedio; los 90 días cuentan desde el primer peso registrado (`src/lib/resumen.ts`). «Descargar PDF» usa la impresión del navegador.

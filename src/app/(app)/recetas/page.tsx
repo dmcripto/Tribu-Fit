@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import { estimarObjetivo, totalesDia } from "@/lib/datos";
-import { RECETAS, escalar, momentoActual, restriccionesA, sugerirRecetas, type Etiqueta, type Momento, type Receta, type Sugerencia } from "@/lib/recetas";
+import { RECETAS, aptaParaSalud, escalar, momentoActual, restriccionesA, sugerirRecetas, type Etiqueta, type Momento, type Receta, type Sugerencia } from "@/lib/recetas";
 import { useComidas, useMedidas, useObjetivoNutricion, usePerfil, usePremium } from "@/lib/repo";
 import { useCliente, useToday } from "@/lib/store";
+import { useSalud } from "@/lib/comunidad";
+import { textoCondiciones } from "@/lib/salud";
 
 const MOMENTOS: { id: Momento; texto: string }[] = [
   { id: "desayuno", texto: "Desayuno" }, { id: "almuerzo", texto: "Almuerzo" }, { id: "cena", texto: "Cena" }, { id: "snack", texto: "Snack" },
@@ -64,6 +66,7 @@ export default function Recetas() {
   const premium = usePremium(yo);
   const asignado = useObjetivoNutricion(uid);
   const { perfil } = usePerfil(yo);
+  const { salud } = useSalud(yo);
   const hora = useCliente(() => new Date().getHours(), 12);
   const [elegido, setMomento] = useState<Momento | null>(null);
   const momento = elegido ?? momentoActual(hora);
@@ -79,10 +82,11 @@ export default function Recetas() {
   const consumido = totalesDia(comidas, hoy);
 
   const sugeridas = useMemo(
-    () => sugerirRecetas({ momento, objetivo, consumido, restricciones, limite: 4 }),
-    [momento, objetivo, consumido, restricciones],
+    () => sugerirRecetas({ momento, objetivo, consumido, restricciones, salud: salud.condiciones, limite: 4 }),
+    [momento, objetivo, consumido, restricciones, salud.condiciones],
   );
-  const otras = RECETAS.filter((r) => r.momento.includes(momento) && restricciones.every((e) => r.etiquetas.includes(e)) && !sugeridas.some((s) => s.receta.id === r.id));
+  const otras = RECETAS.filter((r) => r.momento.includes(momento) && restricciones.every((e) => r.etiquetas.includes(e)) && aptaParaSalud(r, salud.condiciones) && !sugeridas.some((s) => s.receta.id === r.id));
+  const ocultasPorSalud = salud.condiciones.length === 0 ? 0 : RECETAS.filter((r) => r.momento.includes(momento) && restricciones.every((e) => r.etiquetas.includes(e)) && !aptaParaSalud(r, salud.condiciones)).length;
 
   function alternar(id: Etiqueta) {
     const base = restricciones;
@@ -132,6 +136,12 @@ export default function Recetas() {
         {perfil?.restricciones && manual === null && <p className="mt-2 text-xs text-zinc-500">Tomadas de tu perfil: «{perfil.restricciones}».</p>}
         {!perfil?.restricciones && <p className="mt-2 text-xs text-zinc-500">Puedes guardarlas en tu <Link href="/panel" className="underline">perfil de entrenamiento</Link>.</p>}
       </details>
+      {salud.condiciones.length > 0 && (
+        <p role="note" className="rounded-xl border border-green-600 bg-green-600/10 px-3 py-2 text-sm">
+          <b>Respetando tu salud:</b> {textoCondiciones(salud.condiciones)}.{ocultasPorSalud > 0 ? ` Ocultamos ${ocultasPorSalud} receta${ocultasPorSalud === 1 ? "" : "s"} de este momento del día.` : ""}
+          {" "}Revisa siempre las etiquetas de los productos envasados. <Link href="/panel" className="font-bold underline">Cambiar</Link>
+        </p>
+      )}
       {msg && <p role="status" className="text-sm text-green-700 dark:text-green-400">{msg}</p>}
 
       <section className="flex flex-col gap-3" aria-label="Sugeridas para ti">

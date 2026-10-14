@@ -155,7 +155,8 @@ export type Aviso = {
 
 export type AnguloFoto = "frente" | "perfil" | "espalda" | "otra";
 export type FotoProgreso = { id: string; fecha: string; nota: string; imagen: string; tipo: AnguloFoto };
-export type Marca = { id: string; fecha: string; ejercicio: string; peso_kg: number; reps: number };
+/** `serie` está cuando el peso se registró dentro de un entrenamiento (serie 1, 2, 3…). */
+export type Marca = { id: string; fecha: string; ejercicio: string; peso_kg: number; reps: number; serie?: number };
 
 export type Reto = {
   id: string;

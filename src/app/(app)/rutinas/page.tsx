@@ -8,6 +8,8 @@ import {
   RUTINAS, formatoFecha, planTerminado, semanaActual, sumarDias, type Rutina,
 } from "@/lib/datos";
 import PremiumAviso from "@/components/PremiumAviso";
+import RegistroPesos from "@/components/RegistroPesos";
+import { useMarcas } from "@/lib/comunidad";
 import { useEntrenos, usePlanesAlumno, usePremium } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 
@@ -16,6 +18,7 @@ export default function Rutinas() {
   const usuario = useUsuario();
   const uid = usuario?.id ?? "";
   const { anadir } = useEntrenos(uid);
+  const { marcas, guardarSerie, borrarSerie } = useMarcas(uid);
   const planes = usePlanesAlumno(uid);
   const premium = usePremium(usuario);
 
@@ -106,41 +109,33 @@ export default function Rutinas() {
           <div className="h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             <div className="h-full bg-orange-600" style={{ width: `${(100 * n) / total}%` }} />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left font-mono text-xs uppercase text-zinc-500">
-                  <th className="p-2"><span className="sr-only">Hecho</span></th>
-                  <th className="p-2">Ejercicio</th>
-                  <th className="p-2">Series</th>
-                  <th className="p-2">Carga</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rutina.ejercicios.map((x, j) => (
-                  <tr key={x.nombre} className="border-t border-zinc-200 dark:border-zinc-800">
-                    <td className="p-2">
-                      <input
-                        type="checkbox"
-                        className="size-5 accent-orange-600"
-                        aria-label={`Marcar ${x.nombre}`}
-                        checked={marcadas[j] ?? false}
-                        onChange={(e) => marcar(j, e.target.checked)}
-                      />
-                    </td>
-                    <td className="p-2">
+          <ul className="flex flex-col gap-3">
+            {rutina.ejercicios.map((x, j) => (
+              <li key={x.nombre} className="rounded-xl border border-[var(--borde)] p-3">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-5 shrink-0 accent-orange-600"
+                    aria-label={`Marcar ${x.nombre}`}
+                    checked={marcadas[j] ?? false}
+                    onChange={(e) => marcar(j, e.target.checked)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold">
                       {x.nombre}
                       {buscarEjercicio(x.nombre) && (
                         <Link href={`/ejercicios#${buscarEjercicio(x.nombre)!.id}`} className="ml-2 text-xs font-bold text-orange-600 underline" aria-label={`Ver técnica de ${x.nombre}`}>técnica</Link>
                       )}
-                    </td>
-                    <td className="p-2">{x.series}</td>
-                    <td className="p-2">{x.carga}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </p>
+                    <p className="text-xs text-zinc-500">{x.series} · {x.carga}</p>
+                  </div>
+                </div>
+                <div className="mt-3 border-t border-[var(--borde)] pt-3">
+                  <RegistroPesos nombre={x.nombre} series={x.series} carga={x.carga} marcas={marcas} hoy={hoy} guardarSerie={guardarSerie} borrarSerie={borrarSerie} />
+                </div>
+              </li>
+            ))}
+          </ul>
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" className="btn-primary" onClick={terminar}>
               Terminar entreno

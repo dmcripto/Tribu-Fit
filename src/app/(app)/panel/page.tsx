@@ -7,6 +7,7 @@ import { useUsuario } from "@/components/AppShell";
 import { entrenosSemana, racha } from "@/lib/datos";
 import { AVISO_KEY, vincularEntrenador } from "@/lib/auth";
 import PerfilEntrenamiento from "@/components/PerfilEntrenamiento";
+import SaludAlimentacion from "@/components/SaludAlimentacion";
 import PremiumAviso from "@/components/PremiumAviso";
 import { useEntrenos, useMedidas, usePerfil, usePremium } from "@/lib/repo";
 import { modoDemo } from "@/lib/supabase";
@@ -179,6 +180,7 @@ export default function Panel() {
       </section>
       {usuario?.rol === "atleta" && !modoDemo && !usuario.entrenadorId && <Vinculo />}
       {usuario?.rol === "atleta" && <PerfilEntrenamiento usuario={usuario} />}
+      {usuario?.rol === "atleta" && <SaludAlimentacion usuario={usuario} />}
       {!ultima && usuario?.rol === "atleta" && (
         <p className="text-sm text-zinc-500">
           Registra tu primer peso en <Link href="/medidas" className="font-bold text-orange-600">Progreso</Link> para ver tu evolución.

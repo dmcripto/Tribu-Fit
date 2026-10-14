@@ -4,13 +4,16 @@ import { useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import GraficoPeso from "@/components/GraficoPeso";
 import { ChequeoMensual, MarcasEjercicio } from "@/components/ProgresoExtra";
-import { useMedidas } from "@/lib/repo";
+import ResumenNoventaDias from "@/components/ResumenNoventaDias";
+import { useEntrenos, useMedidas, usePerfil } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 
 export default function Medidas() {
   const hoy = useToday();
   const usuario = useUsuario();
   const { medidas, anadir } = useMedidas(usuario?.id ?? "");
+  const { entrenos } = useEntrenos(usuario?.id ?? "");
+  const { perfil } = usePerfil(usuario ?? null);
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
   const ordenadas = [...medidas].sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -107,6 +110,7 @@ export default function Medidas() {
           )}
         </section>
       </div>
+      <ResumenNoventaDias uid={usuario?.id ?? ""} entrenos={entrenos} medidas={medidas} diasSemana={perfil?.dias_semana} nombre={usuario?.nombre} />
       <ChequeoMensual uid={usuario?.id ?? ""} />
       <MarcasEjercicio uid={usuario?.id ?? ""} />
     </main>

@@ -7,6 +7,7 @@
  *
  * Archivo autocontenido (solo importa tipos) para poder probarlo aparte.
  */
+import { textoCondiciones, type Salud } from "./salud";
 import type { Comida, ContenidoRutinas, Entreno, Medida, ObjetivoNutricion, PerfilFitness } from "./types";
 
 export type DatosAlumno = {
@@ -21,6 +22,8 @@ export type DatosAlumno = {
   comidas: Comida[];
   /** Fecha de hoy, AAAA-MM-DD. */
   hoy: string;
+  /** Condiciones de salud sobre la comida que declaró el alumno (si dio permiso). */
+  salud?: Salud;
 };
 
 export type Resultado<T> = { contenido: T; razones: string[]; avisos: string[] };
@@ -508,6 +511,18 @@ export function generarNutricion(d: DatosAlumno): Resultado<ObjetivoNutricion> {
   if (p.restricciones.trim()) {
     lineas.push(`Tienes en cuenta lo que indicaste: ${p.restricciones.trim()}.`);
     avisos.push(`Indicó restricciones o alergias alimentarias: "${p.restricciones.trim()}". Revisa las notas y las comidas que le sugieras.`);
+  }
+
+  const salud = d.salud;
+  if (salud && (salud.condiciones.length > 0 || salud.detalle.trim())) {
+    const txt = salud.condiciones.length > 0 ? textoCondiciones(salud.condiciones) : "otra condición";
+    const det = salud.detalle.trim() ? ` («${salud.detalle.trim()}»)` : "";
+    razones.push(`El alumno declaró: ${txt}${det}. Las recetas que se le sugieren ya respetan esa condición.`);
+    avisos.push(`Declaró condiciones de salud: ${txt}${det}. Revisa calorías, macros y notas antes de aprobar y coordina con su médico o nutricionista si hace falta.`);
+    lineas.push(`Tu entrenador/a tiene en cuenta lo que declaraste sobre tu salud (${txt}). Antes de cambiar mucho tu alimentación, consulta con tu médico o nutricionista.`);
+    if (salud.condiciones.includes("diabetes")) avisos.push("Diabetes: cuida el reparto y la calidad de los carbohidratos (menos azúcar añadida) y coordina con su equipo de salud.");
+    if (salud.condiciones.includes("hipertension")) avisos.push("Hipertensión: revisa el sodio de las comidas y los procesados que le sugieras.");
+    if (salud.condiciones.includes("embarazo_lactancia")) avisos.push("Embarazo o lactancia: NO apliques un déficit calórico para bajar de peso sin indicación de su profesional de salud.");
   }
 
   return { contenido: { kcal, proteina, carbos, grasas, agua, notas: lineas.join("\n") }, razones, avisos };

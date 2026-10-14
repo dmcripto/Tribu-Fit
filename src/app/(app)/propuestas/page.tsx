@@ -8,6 +8,7 @@ import Chip from "@/components/Chip";
 import Desplegable from "@/components/Desplegable";
 import PropuestaVista from "@/components/PropuestaVista";
 import { formatoFecha, resumenPropuesta } from "@/lib/datos";
+import { useSaludAlumnos } from "@/lib/comunidad";
 import { useAutoPropuestas, useCartera } from "@/lib/repo";
 import { useToday } from "@/lib/store";
 import type { Alumno, Propuesta } from "@/lib/types";
@@ -19,7 +20,8 @@ export default function Propuestas() {
   const usuario = useUsuario();
   const hoy = useToday();
   const cartera = useCartera(usuario);
-  useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador");
+  const salud = useSaludAlumnos(usuario);
+  useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador", salud);
   const { alumnos, perfiles, propuestas, asignar, asignarNutricion, resolverPropuesta } = cartera;
 
   const [seleccion, setSeleccion] = useState<string[]>([]);

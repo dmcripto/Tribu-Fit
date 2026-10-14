@@ -9,9 +9,11 @@ import AsignarPlan from "@/components/AsignarPlan";
 import Chip from "@/components/Chip";
 import GraficoPeso from "@/components/GraficoPeso";
 import Pestanas from "@/components/Pestanas";
+import ResumenNoventaDias from "@/components/ResumenNoventaDias";
+import { textoCondiciones } from "@/lib/salud";
 import { ChequeoMensual, MarcasEjercicio } from "@/components/ProgresoExtra";
 import { alertasEntrenador, estadoChequeo, resumenSemanal } from "@/lib/logros";
-import { useChequeos } from "@/lib/comunidad";
+import { useChequeos, useSaludAlumnos } from "@/lib/comunidad";
 import {
   PREMIUM_TEXTO, estadoAlumno, estadoCuota, estadoPremium, formatoFecha, entrenosSemana, planTerminado,
   promedioNutricion, semanaActual, type Estado,
@@ -90,7 +92,8 @@ export default function Entrenador() {
   const hoy = useToday();
   const cartera = useCartera(usuario);
   const { alumnos, planes, objetivos, asignar, asignarNutricion, excepciones, fijarExcepcion, perfiles, propuestas, crearPropuesta } = cartera;
-  useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador");
+  const salud = useSaludAlumnos(usuario);
+  useAutoPropuestas(cartera, hoy, usuario?.rol === "entrenador", salud);
   const chequeos = useChequeos(usuario);
   const avatares = useAvataresAlumnos(usuario);
   const { config } = usePagoConfig(usuario);
@@ -125,7 +128,7 @@ export default function Entrenador() {
 
   /** Genera ahora la propuesta de un tipo con los datos actuales del alumno (sustituye la pendiente). */
   async function generarAhora(a: Alumno, tipo: "rutinas" | "nutricion") {
-    const datos = datosParaMotor(a, perfiles[a.id] ?? null, hoy);
+    const datos = datosParaMotor(a, perfiles[a.id] ?? null, hoy, salud[a.id]);
     const fallo = tipo === "rutinas"
       ? await crearPropuesta({ alumno_id: a.id, tipo, ...generarPlan(datos) }, true)
       : await crearPropuesta({ alumno_id: a.id, tipo, ...generarNutricion(datos) }, true);
@@ -230,6 +233,7 @@ export default function Entrenador() {
                         </Chip>
                       )}
                       {pendientesDe(a.id) > 0 && <Chip tono="aviso">Propuesta por revisar</Chip>}
+                      {salud[a.id]?.condiciones.length ? <Chip tono="aviso">⚠ Salud: {salud[a.id].condiciones.length}</Chip> : null}
                       {a.permiso && ["toca", "vencido"].includes(estadoChequeo(chequeos[a.id], hoy).estado) && <Chip tono="aviso">Chequeo pendiente</Chip>}
                     </span>
                   </button>
@@ -269,6 +273,12 @@ export default function Entrenador() {
         </div>
         <p className="text-sm text-zinc-500">{actual.objetivo || "Sin objetivo indicado"}</p>
         <Link href={`/chat?alumno=${actual.id}`} className="btn-ghost w-fit">Escribirle</Link>
+        {(salud[actual.id]?.condiciones.length || salud[actual.id]?.detalle) ? (
+          <p role="note" className="rounded-xl border border-amber-500 bg-amber-500/10 px-3 py-2 text-sm">
+            <b>⚠ Salud y alimentación:</b> {salud[actual.id].condiciones.length > 0 ? textoCondiciones(salud[actual.id].condiciones) : "otra condición"}
+            {salud[actual.id].detalle ? ` — «${salud[actual.id].detalle}»` : ""}
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           {actual.permiso ? <Chip tono={ESTADO[est.estado].tono}>{ESTADO[est.estado].texto}</Chip> : <Chip tono="neutro">Sin permiso</Chip>}
           {config !== null && (
@@ -287,6 +297,7 @@ export default function Entrenador() {
           { id: "resumen", texto: "Resumen" },
           { id: "rutinas", texto: "Rutinas" },
           { id: "nutricion", texto: "Nutrición" },
+          { id: "noventa", texto: "Resumen 90 días" },
           { id: "progreso", texto: "Fotos y marcas" },
           { id: "pago", texto: "Pago" },
         ]}
@@ -386,6 +397,16 @@ export default function Entrenador() {
       {tab === "nutricion" && (
         <div role="tabpanel" className="tarjeta">
           <AsignarNutricion key={`nutri-${actual.id}`} alumno={actual} actual={objetivos[actual.id]} asignar={asignarNutricion} />
+        </div>
+      )}
+
+      {tab === "noventa" && (
+        <div role="tabpanel" className="flex flex-col gap-5">
+          {!actual.permiso ? (
+            <p className="tarjeta text-sm text-zinc-600 dark:text-zinc-400">Este alumno no ha dado permiso para compartir su progreso contigo.</p>
+          ) : (
+            <ResumenNoventaDias uid={actual.id} entrenos={actual.entrenos} medidas={actual.medidas} diasSemana={perfiles[actual.id]?.dias_semana} nombre={actual.nombre} soloLectura />
+          )}
         </div>
       )}
 

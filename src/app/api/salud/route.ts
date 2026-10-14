@@ -24,6 +24,8 @@ export async function GET() {
         ["cuentas_bancarias_008", "cuentas_bancarias", "id"],
         ["tipo_de_foto_010", "fotos_progreso", "tipo"],
         ["foto_de_perfil_011", "usuarios", "avatar"],
+        ["salud_y_alimentacion_012", "condiciones_salud", "alumno_id"],
+        ["pesos_por_serie_012", "marcas", "serie"],
       ];
       await Promise.all(revisar.map(async ([nombre, tabla, columna]) => {
         const { error } = await db.from(tabla).select(columna).limit(1);

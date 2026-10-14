@@ -11,6 +11,7 @@ import {
 import { modoDemo, supabase } from "./supabase";
 import { useLocal, useToday } from "./store";
 import { generarNutricion, generarPlan, type DatosAlumno } from "./motor";
+import type { Salud } from "./salud";
 import type {
   Alumno, Comida, ContenidoRutinas, Entreno, Medida, Metodo, ObjetivoNutricion, Pago, PagoConfig, PerfilFitness,
   PremiumModo, Propuesta, Usuario,
@@ -846,10 +847,10 @@ function usePendientesRemoto(yo: Usuario | null) {
 export const usePropuestasPendientes: (yo: Usuario | null) => number = modoDemo ? usePendientesLocal : usePendientesRemoto;
 
 /** Reúne los datos de un alumno tal como los necesita el motor de propuestas. */
-export function datosParaMotor(a: Alumno, perfil: PerfilFitness | null, hoy: string): DatosAlumno {
+export function datosParaMotor(a: Alumno, perfil: PerfilFitness | null, hoy: string, salud?: Salud): DatosAlumno {
   return {
     nombre: a.nombre, objetivo: a.objetivo, nivel: a.nivel ?? "", perfil,
-    medidas: a.medidas, entrenos: a.entrenos, comidas: a.comidas, hoy,
+    medidas: a.medidas, entrenos: a.entrenos, comidas: a.comidas, hoy, salud,
   };
 }
 
@@ -861,7 +862,7 @@ const haceDias = (fecha: string, hoy: string) => Math.round((Date.parse(hoy) - D
  * entrenadora, solo para alumnos que completaron su perfil y le dieron permiso. No repite lo que
  * ya está pendiente ni lo que se aprobó o rechazó hace poco.
  */
-export function useAutoPropuestas(c: Cartera, hoy: string, activo: boolean) {
+export function useAutoPropuestas(c: Cartera, hoy: string, activo: boolean, salud?: Record<string, Salud>) {
   const intentadas = useRef(new Set<string>());
   const { alumnos, perfiles, planes, objetivos, propuestas, crearPropuesta } = c;
   useEffect(() => {
@@ -873,7 +874,7 @@ export function useAutoPropuestas(c: Cartera, hoy: string, activo: boolean) {
     for (const a of alumnos) {
       const perfil = perfiles[a.id];
       if (!a.permiso || !perfil) continue;
-      const datos = datosParaMotor(a, perfil, hoy);
+      const datos = datosParaMotor(a, perfil, hoy, salud?.[a.id]);
 
       const kPlan = `${a.id}:rutinas`;
       const tienePlan = planes.some((p) => p.alumno_id === a.id && !planTerminado(p, hoy));
@@ -895,5 +896,5 @@ export function useAutoPropuestas(c: Cartera, hoy: string, activo: boolean) {
         }
       }
     }
-  }, [activo, hoy, alumnos, perfiles, planes, objetivos, propuestas, crearPropuesta]);
+  }, [activo, hoy, alumnos, perfiles, planes, objetivos, propuestas, crearPropuesta, salud]);
 }

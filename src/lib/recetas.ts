@@ -1,3 +1,4 @@
+import type { Condicion } from "./salud";
 import type { ObjetivoNutricion } from "./types";
 
 export type Momento = "desayuno" | "almuerzo" | "cena" | "snack";
@@ -73,6 +74,34 @@ export const RECETAS: Receta[] = [
     etiquetas: T("vegetariana", "vegana", "sin_lactosa", "sin_gluten", "sin_huevo", "sin_pescado", "sin_frutos_secos"), ingredientes: ["30 g de chía", "200 ml de bebida de avena", "Fruta fresca"], pasos: ["Mezcla chía y bebida y deja reposar 4 h o toda la noche.", "Sirve con la fruta."] },
 ];
 
+/** Etiquetas que una receta debe cumplir según la condición de salud declarada. */
+const ETIQUETA_POR_CONDICION: Partial<Record<Condicion, Etiqueta>> = {
+  celiaquia: "sin_gluten",
+  intolerancia_lactosa: "sin_lactosa",
+  alergia_frutos_secos: "sin_frutos_secos",
+  alergia_huevo: "sin_huevo",
+};
+
+/** Recetas que no conviene sugerir con cada condición (azúcar añadida, mucha sal, grasa/colesterol, mercurio…). */
+const EVITAR_POR_CONDICION: Partial<Record<Condicion, string[]>> = {
+  diabetes: ["yogur-granola", "batido-recuperacion"],
+  hipertension: ["atun-ensalada", "tostada-pavo", "tofu-salteado"],
+  colesterol_alto: ["tostadas-aguacate", "huevos-cocidos", "ternera-verduras"],
+  embarazo_lactancia: ["atun-ensalada"],
+};
+/** Con diabetes, además, se evitan las recetas con más de 70 g de carbohidratos por porción. */
+const CARBOS_MAX_DIABETES = 70;
+
+export const restriccionesDeSalud = (c: Condicion[]): Etiqueta[] =>
+  [...new Set(c.map((x) => ETIQUETA_POR_CONDICION[x]).filter((e): e is Etiqueta => !!e))];
+
+/** ¿Es una receta apta para quien declaró estas condiciones? */
+export function aptaParaSalud(r: Receta, c: Condicion[]): boolean {
+  if (!restriccionesDeSalud(c).every((e) => r.etiquetas.includes(e))) return false;
+  if (c.includes("diabetes") && r.carbos > CARBOS_MAX_DIABETES) return false;
+  return !c.some((x) => EVITAR_POR_CONDICION[x]?.includes(r.id));
+}
+
 const sinTildes = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 /** Convierte el texto libre de restricciones del perfil en etiquetas que la receta debe cumplir. */
@@ -113,9 +142,11 @@ export function sugerirRecetas(opts: {
   objetivo: Pick<ObjetivoNutricion, "kcal" | "proteina"> | null;
   consumido: { kcal: number; proteina: number };
   restricciones: Etiqueta[];
+  /** Condiciones de salud declaradas: filtran además de las restricciones. */
+  salud?: Condicion[];
   limite?: number;
 }): Sugerencia[] {
-  const { momento, objetivo, consumido, restricciones, limite = 6 } = opts;
+  const { momento, objetivo, consumido, restricciones, salud = [], limite = 6 } = opts;
   const meta = objetivo ?? { kcal: 2000, proteina: 110 };
   // Lo que toca comer ahora: la parte típica del momento, sin pasarse de lo que queda del día.
   const quedaKcal = Math.max(meta.kcal - consumido.kcal, 0);
@@ -124,7 +155,7 @@ export function sugerirRecetas(opts: {
   const objProt = Math.min(meta.proteina * FRACCION[momento], quedaProt || meta.proteina * FRACCION[momento]);
 
   return RECETAS
-    .filter((r) => r.momento.includes(momento) && restricciones.every((e) => r.etiquetas.includes(e)))
+    .filter((r) => r.momento.includes(momento) && restricciones.every((e) => r.etiquetas.includes(e)) && aptaParaSalud(r, salud))
     .map((r) => {
       const ideal = objKcal / r.kcal;
       const porcion = Math.min(2, Math.max(0.5, Math.round(ideal * 4) / 4));

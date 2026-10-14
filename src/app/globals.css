@@ -96,3 +96,11 @@ main > *:nth-child(n+6) { animation-delay: 0.25s; }
     @apply flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-600 text-white shadow-md shadow-orange-600/30;
   }
 }
+
+/* Al imprimir o guardar como PDF solo sale el bloque marcado como .imprimible (el resumen de 90 días). */
+@media print {
+  body * { visibility: hidden !important; }
+  .imprimible, .imprimible * { visibility: visible !important; }
+  .imprimible { position: absolute; left: 0; top: 0; width: 100%; border: 0 !important; box-shadow: none !important; background: #fff !important; color: #000 !important; }
+  .imprimible * { animation: none !important; }
+}
