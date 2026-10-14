@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 M = json.load(open("marketing/qr/matriz.json"))
 N, DATOS, URL = M["n"], M["datos"], M["url"]
 URL_CORTA = URL.replace("https://", "")
-LOGO = Image.open("public/logo.png").convert("RGBA")
+LOGO = Image.open("marketing/logo/logo-tribu-fit-2000.png").convert("RGBA")
 NEGRO_FONDO = (18, 13, 10)
 TINTA = (17, 17, 17)
 NARANJA = (234, 88, 12)

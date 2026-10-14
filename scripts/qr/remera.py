@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 M = json.load(open("marketing/qr/matriz.json"))
 N, DATOS, URL = M["n"], M["datos"], M["url"]
-LOGO = "public/logo.png"
+LOGO = "marketing/logo/logo-tribu-fit-2000.png"
 FUENTE = "/usr/share/fonts/opentype/inter/InterDisplay-Black.otf"
 FUENTE2 = "/usr/share/fonts/opentype/inter/InterDisplay-Bold.otf"
 NARANJA = (234, 88, 12)
