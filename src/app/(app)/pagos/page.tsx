@@ -5,14 +5,15 @@ import { useEffect, useState } from "react";
 import { useUsuario } from "@/components/AppShell";
 import CampoTexto from "@/components/CampoTexto";
 import CobroMercadoPago from "@/components/CobroMercadoPago";
-import CuentasBancarias, { CuentasParaTransferir } from "@/components/CuentasBancarias";
+import CuentasBancarias, { CuentasParaTransferir, Tarjeta as TarjetaCuenta } from "@/components/CuentasBancarias";
 import Chip from "@/components/Chip";
-import Desplegable from "@/components/Desplegable";
+import Desplegable, { Opcion } from "@/components/Desplegable";
 import Pestanas from "@/components/Pestanas";
 import {
   METODOS, PREMIUM_TEXTO, enlaceSeguro, esImagen, estadoCuota, estadoPremium, formatoFecha,
   siguienteVencimiento, type EstadoCuota,
 } from "@/lib/datos";
+import { useCuentasBancarias } from "@/lib/bancos";
 import { imagenADataUrl } from "@/lib/imagen";
 import PremiumAviso from "@/components/PremiumAviso";
 import { useCartera, usePagoConfig, usePagos, usePremium } from "@/lib/repo";
@@ -67,6 +68,8 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
   const { config } = usePagoConfig(usuario);
   const { pagos, registrar, recargar } = usePagos(usuario);
   const [mp] = useMpEstado(usuario);
+  const { cuentas } = useCuentasBancarias(usuario);
+  const cuentaUala = cuentas.find((c) => /ual[aá]/i.test(c.banco));
   const retorno = useCliente(() => new URLSearchParams(window.location.search).get("mp") ?? "", "");
   const [pagandoMp, setPagandoMp] = useState(false);
   const mios = pagos.filter((p) => p.alumno_id === usuario.id);
@@ -123,7 +126,8 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
   const metodos = [
     ...(mp.conectado ? [{ id: "mp", texto: "Mercado Pago" }] : []),
     ...(hayTarjeta ? [{ id: "tarjeta", texto: "Tarjeta" }] : []),
-    ...(hayQr ? [{ id: "qr", texto: "QR" }] : []),
+    ...(cuentaUala ? [{ id: "uala", texto: "Ualá" }] : []),
+    ...(hayQr && !cuentaUala ? [{ id: "qr", texto: "QR" }] : []),
     { id: "otro", texto: "Transferencia o efectivo" },
   ];
   const [metodoElegido, setMetodoElegido] = useState<string | null>(null);
@@ -178,6 +182,26 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
                   <button type="button" className="btn-primary" onClick={pagarConMp} disabled={pagandoMp}>
                     {pagandoMp ? "Abriendo Mercado Pago…" : "Pagar con Mercado Pago"}
                   </button>
+                </>
+              )}
+              {metodoActivo === "uala" && cuentaUala && (
+                <>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    Pagas {dinero(config.precio, config.moneda)} desde tu app de Ualá (o cualquier billetera). Elige cómo:
+                  </p>
+                  <Opcion titulo="Transferir con alias o CVU" abierta>
+                    <ul className="flex w-full flex-col gap-3" aria-label="Cuenta Ualá para transferir">
+                      <TarjetaCuenta c={cuentaUala} />
+                    </ul>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">Copia el alias o el CVU, pega en tu app y envía el monto.</p>
+                  </Opcion>
+                  {hayQr && (
+                    <Opcion titulo="Escanear el código QR">
+                      <Imagen src={config.qr} alt="Código QR para pagar a tu entrenador/a" className="aspect-square w-full max-w-64 rounded-lg bg-white object-contain p-2" />
+                      <p className="text-sm text-zinc-600 dark:text-zinc-400">Escanéalo con Ualá y paga {dinero(config.precio, config.moneda)}.</p>
+                    </Opcion>
+                  )}
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">Después de pagar, avisa abajo en «Ya pagué» para que tu entrenador/a lo confirme.</p>
                 </>
               )}
               {metodoActivo === "tarjeta" && (

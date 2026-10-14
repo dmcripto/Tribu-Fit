@@ -29,7 +29,7 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   );
 }
 
-function Tarjeta({ c, acciones }: { c: CuentaBancaria; acciones?: React.ReactNode }) {
+export function Tarjeta({ c, acciones }: { c: CuentaBancaria; acciones?: React.ReactNode }) {
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-[var(--borde)] p-3">
       <div className="flex items-start justify-between gap-3">
