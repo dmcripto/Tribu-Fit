@@ -152,7 +152,7 @@ function VistaAlumno({ usuario }: { usuario: Usuario }) {
         <p role="alert" className="rounded-xl border border-red-600 bg-red-600/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">No se completó el pago. Puedes intentarlo de nuevo cuando quieras.</p>
       )}
 
-      <PremiumAviso estado={premium} mostrarActivo sinBoton />
+      <PremiumAviso estado={premium} mostrarActivo sinBoton avisoSuave />
 
       {sinVinculo ? (
         <section className="tarjeta flex flex-col items-start gap-3">

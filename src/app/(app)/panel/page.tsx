@@ -102,7 +102,7 @@ export default function Panel() {
   const hora = useCliente(() => new Date().getHours(), 12);
   const recordatorios = useRecordatorios(usuario);
   const { leidos } = useRecordatoriosLeidos();
-  const paraHoy = recordatorios.filter((r) => !leidos.includes(r.id)).slice(0, 3);
+  const paraHoy = recordatorios.filter((r) => !leidos.includes(r.id) && !/^r-(cuota|gracia)-/.test(r.id)).slice(0, 3);
 
   const orden = [...medidas].sort((a, b) => a.fecha.localeCompare(b.fecha));
   const ultima = orden[orden.length - 1];
@@ -130,7 +130,7 @@ export default function Panel() {
           <button type="button" className="text-sm font-bold text-orange-600" onClick={() => setAvisoCodigo(null)}>Entendido</button>
         </section>
       )}
-      {usuario?.rol === "atleta" && <PremiumAviso estado={premium} mostrarActivo />}
+      {usuario?.rol === "atleta" && <PremiumAviso estado={premium} mostrarActivo avisoSuave />}
       {paraHoy.length > 0 && (
         <section className="tarjeta flex flex-col gap-2" aria-label="Para hoy">
           <h2 className="subtitulo">Para hoy</h2>

@@ -43,11 +43,11 @@ export function useRecordatorios(yo: Usuario | null): Recordatorio[] {
     if (ch.estado === "sin") out.push({ id: `r-chequeo-${hoy}`, titulo: "Haz tu primer chequeo con fotos", texto: "Frente, perfil izquierdo, perfil derecho y espalda: así vas a poder ver tu cambio mes a mes.", enlace: "/medidas" });
     else if (ch.estado === "toca" || ch.estado === "vencido") out.push({ id: `r-chequeo-${ch.proximo}`, titulo: "Toca tu chequeo mensual", texto: `Pasaron ${ch.dias} días desde tu último chequeo con fotos.`, enlace: "/medidas", urgente: ch.estado === "vencido" });
     else if (ch.estado === "pronto") out.push({ id: `r-chequeo-${ch.proximo}`, titulo: "Se acerca tu chequeo mensual", texto: `Te toca el ${formatoFecha(ch.proximo!)}. Prepara buena luz y la misma ropa.`, enlace: "/medidas" });
-    if (!premium.activo && premium.motivo !== "libre") out.push({ id: `r-premium-${hoy}`, titulo: "Tu seguimiento personalizado está bloqueado", texto: "Paga tu cuota para recuperar tu plan.", enlace: "/pagos", urgente: true });
-    else if (premium.activo && premium.vence && premium.motivo === "al_dia" && dias(premium.vence, hoy) <= 3)
-      out.push({ id: `r-cuota-${premium.vence}`, titulo: "Tu cuota está por vencer", texto: `Vence el ${formatoFecha(premium.vence)}.`, enlace: "/pagos", urgente: true });
+    if (!premium.activo && premium.motivo !== "libre") out.push({ id: `r-premium-${hoy}`, titulo: "Tu seguimiento personalizado está en pausa", texto: "Renueva tu cuota y vuelves a tener tu plan.", enlace: "/pagos", urgente: true });
+    else if (premium.activo && premium.vence && premium.motivo === "al_dia" && dias(premium.vence, hoy) <= 7)
+      out.push({ id: `r-cuota-${premium.vence}`, titulo: "Tu cuota vence pronto", texto: `Vence el ${formatoFecha(premium.vence)}. Puedes renovarla cuando quieras.`, enlace: "/pagos" });
     else if (premium.motivo === "en_gracia" && premium.vence)
-      out.push({ id: `r-gracia-${premium.vence}`, titulo: "Tu cuota venció", texto: `Tienes gracia hasta el ${formatoFecha(premium.graciaHasta ?? sumarDias(premium.vence, 3))}.`, enlace: "/pagos", urgente: true });
+      out.push({ id: `r-gracia-${premium.vence}`, titulo: "Es momento de renovar tu cuota", texto: `Tienes hasta el ${formatoFecha(premium.graciaHasta ?? sumarDias(premium.vence, 3))} para renovarla sin perder tu seguimiento.`, enlace: "/pagos" });
     for (const r of retos.filter((x) => x.desde <= hoy && x.hasta >= hoy)) {
       const n = progresoReto(entrenos, r.desde, r.hasta);
       if (n < r.meta_entrenos) out.push({ id: `r-reto-${r.id}-${hoy}`, titulo: `Reto «${r.titulo}»: ${n}/${r.meta_entrenos}`, texto: `Te quedan ${dias(r.hasta, hoy)} días.`, enlace: "/retos" });
