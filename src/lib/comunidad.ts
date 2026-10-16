@@ -249,6 +249,9 @@ function useFotosRemoto(uid: string): ApiFotos {
   const [fotos, recargar] = useRemoto(cargar, VACIO_FOTOS);
   const anadir = useCallback(async (f: { fecha: string; nota: string; imagen: string; tipo: AnguloFoto }) => {
     let { error } = await db().from("fotos_progreso").insert({ usuario_id: uid, ...f });
+    if (error && /check constraint/i.test(error.message) && /tipo/i.test(error.message)) {
+      return "Falta activar los dos perfiles (izquierdo y derecho) en la base de datos (migración 013).";
+    }
     if (error && /tipo/i.test(error.message)) {
       const { tipo: _omitido, ...sinTipo } = f;
       void _omitido;

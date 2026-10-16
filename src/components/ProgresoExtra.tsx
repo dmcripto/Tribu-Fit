@@ -15,10 +15,15 @@ const coma = (n: number) => String(Math.round(n * 10) / 10).replace(".", ",");
 
 const ANGULOS: { id: Exclude<AnguloFoto, "otra">; texto: string; ayuda: string }[] = [
   { id: "frente", texto: "Frente", ayuda: "De pie, de frente, brazos relajados" },
-  { id: "perfil", texto: "Perfil", ayuda: "De costado, mirando al frente" },
+  { id: "perfil_izq", texto: "Perfil izquierdo", ayuda: "De costado, lado izquierdo hacia la cámara" },
+  { id: "perfil_der", texto: "Perfil derecho", ayuda: "De costado, lado derecho hacia la cámara" },
   { id: "espalda", texto: "Espalda", ayuda: "De espaldas, brazos relajados" },
 ];
-const NOMBRE_ANGULO: Record<AnguloFoto, string> = { frente: "Frente", perfil: "Perfil", espalda: "Espalda", otra: "Foto" };
+const NOMBRE_ANGULO: Record<AnguloFoto, string> = {
+  frente: "Frente", perfil: "Perfil", perfil_izq: "Perfil izquierdo", perfil_der: "Perfil derecho", espalda: "Espalda", otra: "Foto",
+};
+/** Para comparar «antes y después» también entran las fotos de «perfil» de antes de separar los dos lados. */
+const ANGULOS_COMPARA = [...ANGULOS, { id: "perfil" as const, texto: "Perfil", ayuda: "" }];
 
 const ESTADO_TEXTO: Record<EstadoChequeo["estado"], { texto: string; tono: "ok" | "aviso" | "mal" | "neutro" }> = {
   sin: { texto: "Sin chequeos", tono: "neutro" },
@@ -29,7 +34,7 @@ const ESTADO_TEXTO: Record<EstadoChequeo["estado"], { texto: string; tono: "ok" 
 };
 
 /**
- * Chequeo mensual con fotos: cada 30 días el alumno sube tres fotos (frente, perfil y espalda) y se compara
+ * Chequeo mensual con fotos: cada 30 días el alumno sube cuatro fotos (frente, perfil izquierdo, perfil derecho y espalda) y se compara
  * con su primer chequeo. `soloLectura` es la vista de la entrenadora.
  */
 export function ChequeoMensual({ uid, soloLectura = false }: { uid: string; soloLectura?: boolean }) {
@@ -62,7 +67,7 @@ export function ChequeoMensual({ uid, soloLectura = false }: { uid: string; solo
   }
 
   // Comparación: la primera foto de cada ángulo contra la más reciente.
-  const comparaciones = ANGULOS.map((a) => {
+  const comparaciones = ANGULOS_COMPARA.map((a) => {
     const lista = fotos.filter((f) => f.tipo === a.id).sort((x, y) => x.fecha.localeCompare(y.fecha));
     return lista.length >= 2 ? { a, antes: lista[0], ahora: lista[lista.length - 1] } : null;
   }).filter((x): x is NonNullable<typeof x> => x !== null);
@@ -75,7 +80,7 @@ export function ChequeoMensual({ uid, soloLectura = false }: { uid: string; solo
         <h2 className="subtitulo">Chequeo mensual</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {est.estado === "sin"
-            ? soloLectura ? "Todavía no subió fotos de chequeo." : "Aún no tienes chequeos. Sube tus 3 fotos para empezar a ver tu cambio."
+            ? soloLectura ? "Todavía no subió fotos de chequeo." : "Aún no tienes chequeos. Sube tus 4 fotos para empezar a ver tu cambio."
             : `Último chequeo: ${formatoFecha(ultima!)} (hace ${est.dias} días). Próximo: ${formatoFecha(est.proximo!)}.`}
         </p>
       </div>
@@ -94,8 +99,8 @@ export function ChequeoMensual({ uid, soloLectura = false }: { uid: string; solo
               Ya pasaron los 30 días: toca tu chequeo. Con buena luz, misma ropa y mismo lugar que la vez anterior.
             </p>
           )}
-          <p className="text-sm font-bold">Chequeo de hoy · {hechosHoy} de 3 fotos</p>
-          <ul className="grid grid-cols-3 gap-2">
+          <p className="text-sm font-bold">Chequeo de hoy · {hechosHoy} de 4 fotos</p>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {ANGULOS.map((a) => {
               const f = deHoy(a.id);
               return (
@@ -124,7 +129,7 @@ export function ChequeoMensual({ uid, soloLectura = false }: { uid: string; solo
       {comparaciones.length > 0 && (
         <div className="flex flex-col gap-3" aria-label="Antes y después">
           <h3 className="font-black">Antes y después</h3>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {comparaciones.map(({ a, antes, ahora }) => (
               <div key={a.id} className="flex flex-col gap-1">
                 <p className="text-xs font-bold uppercase text-zinc-500">{a.texto}</p>

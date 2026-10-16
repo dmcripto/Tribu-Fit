@@ -153,7 +153,8 @@ export type Aviso = {
   creado: string;
 };
 
-export type AnguloFoto = "frente" | "perfil" | "espalda" | "otra";
+/** «perfil» queda para las fotos viejas (antes de separar izquierdo y derecho). */
+export type AnguloFoto = "frente" | "perfil" | "perfil_izq" | "perfil_der" | "espalda" | "otra";
 export type FotoProgreso = { id: string; fecha: string; nota: string; imagen: string; tipo: AnguloFoto };
 /** `serie` está cuando el peso se registró dentro de un entrenamiento (serie 1, 2, 3…). */
 export type Marca = { id: string; fecha: string; ejercicio: string; peso_kg: number; reps: number; serie?: number };

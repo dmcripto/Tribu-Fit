@@ -107,7 +107,7 @@ Bancos y billeteras: tabla `cuentas_bancarias` (banco, titular, alias, CBU/CVU c
 
 ## Chequeo mensual con fotos (migración 010)
 
-Cada 30 días el alumno sube 3 fotos (frente, perfil, espalda) en **Progreso**; la app compara con su primer chequeo («antes y después»), avisa cuando se acerca (25 días), toca (30) o vence (35) y la entrenadora ve el estado en las alertas, la lista de alumnos y la ficha (solo si el alumno dio permiso). Sin la migración 010 las fotos siguen funcionando, sin ángulo.
+Cada 30 días el alumno sube 4 fotos (frente, perfil izquierdo, perfil derecho y espalda) en **Progreso**; la app compara con su primer chequeo («antes y después»), avisa cuando se acerca (25 días), toca (30) o vence (35) y la entrenadora ve el estado en las alertas, la lista de alumnos y la ficha (solo si el alumno dio permiso). Sin la migración 010 las fotos siguen funcionando, sin ángulo. Los dos perfiles (izquierdo y derecho) necesitan la migración 013; las fotos de «perfil» anteriores se conservan.
 
 ## Foto de perfil (migración 011)
 

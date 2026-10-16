@@ -695,3 +695,9 @@ create policy "entrenador ve condiciones" on condiciones_salud for select using 
 -- Una misma serie del mismo día se guarda una sola vez (se corrige en lugar de duplicarse).
 alter table marcas add column serie smallint check (serie between 1 and 20);
 create unique index marcas_serie_unica on marcas (usuario_id, fecha, ejercicio, serie);
+
+
+/* ---------- Migración 013: perfil izquierdo y derecho en el chequeo mensual ---------- */
+alter table fotos_progreso drop constraint if exists fotos_progreso_tipo_check;
+alter table fotos_progreso add constraint fotos_progreso_tipo_check
+  check (tipo in ('frente', 'perfil', 'perfil_izq', 'perfil_der', 'espalda', 'otra'));
