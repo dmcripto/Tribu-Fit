@@ -64,7 +64,11 @@ export default function Terminos() {
         <p>Podemos actualizar estos términos. Si el cambio es importante, te avisaremos y podremos pedirte que lo aceptes de nuevo. Se rigen por la ley del país donde tiene su sede el responsable del servicio, sin perjuicio de los derechos de consumidor que te reconozca la ley de tu país.</p>
       </Seccion>
 
-      <Seccion titulo="12. Contacto">
+      <Seccion titulo="12. Propiedad intelectual">
+        <p>Tribu Fit (la aplicación, su código, diseño, textos, logotipo, imágenes y videos) es propiedad de Mario David Macías, con todos los derechos reservados. Se te permite usar el servicio para tu entrenamiento, pero no copiar, reproducir, modificar, descompilar, hacer ingeniería inversa, extraer de forma automática su contenido ni crear obras derivadas o servicios que lo imiten, sin autorización escrita del titular. El nombre y el logotipo «Tribu Fit» no pueden usarse sin permiso.</p>
+      </Seccion>
+
+      <Seccion titulo="13. Contacto">
         <p>{CONTACTO ? <>Escríbenos a <b>{CONTACTO}</b>.</> : "Contáctanos por el medio indicado en la aplicación."}</p>
       </Seccion>
     </PaginaLegal>
