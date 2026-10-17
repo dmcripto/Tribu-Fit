@@ -2,6 +2,8 @@
   "name": "tribu-fit",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "Mario David Macías",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -2,6 +2,8 @@
 
 Entrena en tribu. Web (Next.js) y apps de fitness con comunidad y seguimiento personalizado.
 
+> © 2026 Mario David Macías. Todos los derechos reservados. Software propietario: no se permite copiarlo, modificarlo ni usarlo sin autorización escrita de su titular (ver [LICENSE](LICENSE)).
+
 ## Desarrollo
 
 ```bash

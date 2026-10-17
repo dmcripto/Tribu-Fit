@@ -107,6 +107,7 @@ export default function Home() {
       <footer className="flex flex-wrap gap-4 border-t border-[var(--borde)] pt-4 text-sm text-zinc-500">
         <Link href="/terminos" className="underline">Términos de uso</Link>
         <Link href="/privacidad" className="underline">Política de privacidad</Link>
+        <span className="w-full">© 2026 Mario David Macías. Todos los derechos reservados.</span>
       </footer>
     </main>
   );
